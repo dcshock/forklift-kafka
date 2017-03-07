@@ -18,7 +18,6 @@ libraryDependencies ++= Seq(
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.3",
     "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.3",
     "ch.qos.logback" % "logback-classic" % "1.0.13",
-    "org.apache.geronimo.specs" % "geronimo-jms_1.1_spec" % "1.1.1",
     "org.reflections" % "reflections" % "0.9.10",
     "javax.inject" % "javax.inject" % "1",
     "com.novocode" % "junit-interface" % "0.11" % "test",
@@ -51,7 +50,7 @@ publishTo := {
 pomIncludeRepository := { _ => false }
 
 pomExtra := (
-  <url>https://github.com/dcshock/forklift</url>
+  <url>https://github.com/dcshock/forklift-kafka</url>
   <licenses>
     <license>
       <name>BSD-style</name>
@@ -60,14 +59,22 @@ pomExtra := (
     </license>
   </licenses>
   <scm>
-    <url>git@github.com:dcshock/forklift.git</url>
-    <connection>scm:git:git@github.com:dcshock/forklift.git</connection>
+    <url>git@github.com:dcshock/forklift-kafka.git</url>
+    <connection>scm:git:git@github.com:dcshock/forklift-kafka.git</connection>
   </scm>
   <developers>
     <developer>
       <id>dcshock</id>
       <name>Matt Conroy</name>
       <url>http://www.mattconroy.com</url>
+    </developer>
+    <developer>
+      <id>afrieze</id>
+      <name>Andrew Frieze</name>
+    </developer>
+    <developer>
+      <id>kuroshii</id>
+      <name>Bridger Howell</name>
     </developer>
   </developers>)
 
