@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import forklift.classloader.RunAsClassLoader;
-import forklift.concurrent.Callback;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.connectors.ForkliftMessage;
@@ -46,9 +45,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.jms.JMSException;
-import javax.jms.Message;
-
 public class Consumer {
     static ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule())
                                                    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -77,7 +73,7 @@ public class Consumer {
     private BlockingQueue<Runnable> blockQueue;
     private ThreadPoolExecutor threadPool;
 
-    private Callback<Consumer> outOfMessages;
+    private java.util.function.Consumer<Consumer> outOfMessages;
 
     private AtomicBoolean running = new AtomicBoolean(false);
     public Consumer(Class<?> msgHandler, ForkliftConnectorI connector) {
@@ -213,7 +209,7 @@ public class Consumer {
             // Always cleanup the consumer.
             if (consumer != null)
                 consumer.close();
-        } catch (ConnectorException | JMSException e) {
+        } catch (ConnectorException | ConnectorException e) {
             log.debug("", e);
         }
     }
@@ -289,7 +285,7 @@ public class Consumer {
                             threadPool.execute(runner);
                         else
                             runner.run();
-                    } catch (Exception e) {
+                    } catch (ConnectorException e) {
                         // If this error occurs we had a massive problem with the conusmer class setup.
                         log.error("Consumer couldn't be used.", e);
 
@@ -299,7 +295,7 @@ public class Consumer {
                 }
 
                 if (outOfMessages != null)
-                    outOfMessages.handle(this);
+                    outOfMessages.accept(this);
             }
 
             // Shutdown the pool, but let actively executing work finish.
@@ -309,7 +305,7 @@ public class Consumer {
                 threadPool.awaitTermination(60, TimeUnit.SECONDS);
                 blockQueue.clear();
             }
-        } catch (JMSException e) {
+        } catch (Exception e) {
             running.set(false);
             log.error("JMS Error in message loop: ", e);
         } catch (InterruptedException ignored) {
@@ -327,7 +323,7 @@ public class Consumer {
         running.set(false);
     }
 
-    public void setOutOfMessages(Callback<Consumer> outOfMessages) {
+    public void setOutOfMessages(java.util.function.Consumer<Consumer> outOfMessages) {
         this.outOfMessages = outOfMessages;
     }
 
