@@ -1,6 +1,5 @@
 package forklift.retry;
 
-import forklift.concurrent.Callback;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.connectors.ForkliftMessage;
 import forklift.message.Header;
@@ -25,10 +24,10 @@ public class RetryRunnable implements Runnable {
     public void run() {
         ForkliftProducerI producer = null;
         try {
-        if (msg.getQueue() != null)
-            producer = connector.getQueueProducer(msg.getQueue());
-        else if (msg.getTopic() != null)
-            producer = connector.getTopicProducer(msg.getTopic());
+            if (msg.getQueue() != null)
+                producer = connector.getQueueProducer(msg.getQueue());
+            else if (msg.getTopic() != null)
+                producer = connector.getTopicProducer(msg.getTopic());
         } catch (Throwable e) {
             log.error("", e);
             e.printStackTrace();

@@ -14,7 +14,7 @@ import java.util.Properties;
  */
 public class ZookeeperService implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(ZookeeperService.class);
-    private ZooKeeperServerMain server;
+    private ZookeeperServer server;
     private File dataDir = new File("src/test/resources/zookeeper");
     Thread runningThread;
     private int clientPort;
@@ -36,7 +36,7 @@ public class ZookeeperService implements Runnable {
             quorumConfiguration.parseProperties(properties);
             final ServerConfig configuration = new ServerConfig();
             configuration.readFrom(quorumConfiguration);
-            server = new ZooKeeperServerMain();
+            server = new ZookeeperServer();
             server.runFromConfig(configuration);
         } catch (Exception e) {
             log.error("Unable to start embedded zookeeper server", e);
@@ -45,11 +45,19 @@ public class ZookeeperService implements Runnable {
     }
 
     public void stop() throws InterruptedException, IOException {
+        server.shutdown();
         runningThread.interrupt();
         Thread.sleep(500);
     }
 
     public File getDataDirectoryFile() {
         return dataDir;
+    }
+
+    private class ZookeeperServer extends ZooKeeperServerMain{
+        @Override
+        public void shutdown(){
+            super.shutdown();
+        }
     }
 }

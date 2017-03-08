@@ -5,11 +5,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class ForkliftMessage {
+    private String id;
     private String msg;
     private boolean flagged;
     private String warning;
-    private Map<Header, Object> headers;
-    private Map<String, Object> properties;
+    private Map<Header, Object> headers = new HashMap<>();
+    private Map<String, Object> properties = new HashMap<>();
 
     public ForkliftMessage() {
     }
@@ -20,6 +21,10 @@ public class ForkliftMessage {
 
     public boolean acknowledge() throws ConnectorException {
         return true;
+    }
+
+    public String getId(){
+        return null;
     }
 
     public String getMsg() {

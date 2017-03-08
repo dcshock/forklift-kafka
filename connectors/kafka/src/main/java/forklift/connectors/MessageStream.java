@@ -60,10 +60,10 @@ public class MessageStream {
      * Blocking method to retrieve the next available record for a topic.  Messages are retreived
      * in FIFO order within their topic.
      *
-     * @param topic   the topic of the {@link javax.jms.Message}
+     * @param topic   the topic the retrieved message should belong to
      * @param timeout how long to wait for a message in milliseconds
      * @return a message if one is available, else null
-     * @throws InterruptedException
+     * @throws InterruptedException if interrupted
      */
     public KafkaMessage nextRecord(String topic, long timeout) throws InterruptedException {
         KafkaMessage message = null;

@@ -69,12 +69,13 @@ public class TestServiceManager {
             // Kill the broker and cleanup the testing data.
             try {
                 forklift.shutdown();
+                Thread.sleep(1500);
                 schemaRegistry.stop();
-                Thread.sleep(500);
+                Thread.sleep(1500);
                 kafka.stop();
-                Thread.sleep(500);
+                Thread.sleep(1500);
                 zookeeper.stop();
-                Thread.sleep(500);
+                Thread.sleep(1500);
                 FileUtils.deleteDirectory(kafka.getDataDirectoryFile());
                 FileUtils.deleteDirectory(zookeeper.getDataDirectoryFile());
             } catch (Throwable e) {

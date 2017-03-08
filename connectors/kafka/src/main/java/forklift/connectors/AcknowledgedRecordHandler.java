@@ -30,9 +30,9 @@ public class AcknowledgedRecordHandler {
      * Only records belonging to {@link #addPartitions(java.util.Collection) added partitions} may be processed. Note that this is a
      * blocking method and a short delay may occur should the available topic paritions be changing.
      *
-     * @param record
+     * @param record the record to acknowledge
      * @return true if the record has been achnowledged and may be processed, else false
-     * @throws InterruptedException
+     * @throws InterruptedException if interrupted
      */
     public boolean acknowledgeRecord(ConsumerRecord<?, ?> record) throws InterruptedException {
         boolean acknowledged = false;
@@ -108,7 +108,7 @@ public class AcknowledgedRecordHandler {
      *
      * @param removedPartitions the partitions to remove
      * @return the highest offsets of the removed partitions
-     * @throws InterruptedException
+     * @throws InterruptedException if interrupted
      */
     public Map<TopicPartition, OffsetAndMetadata> removePartitions(Collection<TopicPartition> removedPartitions)
                     throws InterruptedException {

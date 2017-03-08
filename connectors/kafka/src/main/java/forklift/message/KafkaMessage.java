@@ -18,7 +18,7 @@ public class KafkaMessage extends ForkliftMessage {
     public KafkaMessage(KafkaController controller, ConsumerRecord<?, ?> consumerRecord) {
         this.controller = controller;
         this.consumerRecord = consumerRecord;
-
+        parseRecord();
     }
 
     public ConsumerRecord<?, ?> getConsumerRecord() {
@@ -32,6 +32,11 @@ public class KafkaMessage extends ForkliftMessage {
         } catch (InterruptedException e) {
             throw new ConnectorException("Error acknowledging message");
         }
+    }
+
+    @Override
+    public String getId() {
+        return consumerRecord.topic() + "-" + consumerRecord.partition() + "-" + consumerRecord.offset();
     }
 
     /**

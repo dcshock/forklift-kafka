@@ -15,14 +15,11 @@ initialize := {
 }
 
 libraryDependencies ++= Seq(
-  "com.github.dcshock" % "forklift"           % "0.23",
-  "com.github.dcshock" % "forklift-activemq"  % "0.10",
-  "org.apache.activemq" % "activemq-broker" % "5.14.0",
-  "com.github.dcshock" % "forklift-replay"    % "0.14",
-  "com.github.dcshock" % "forklift-retry"     % "0.11",
-  "com.github.dcshock" % "forklift-stats"     % "0.1",
-  "com.github.dcshock" % "consul-rest-client" % "0.10",
-  "io.searchbox" % "jest" % "2.0.0",
+  "com.github.dcshock"  % "forklift"            % "0.24",
+  "com.github.dcshock"  % "forklift-kafka"      % "0.1",
+  "com.github.dcshock"  % "forklift-stats"      % "0.1",
+  "com.github.dcshock"  % "consul-rest-client"  % "0.10",
+  "io.searchbox"        % "jest"                % "2.0.0",
   "org.apache.geronimo.specs" % "geronimo-jms_1.1_spec" % "1.1.1",
   "args4j" % "args4j" % "2.0.31",
   "org.codehaus.janino" % "janino" % "2.6.1",

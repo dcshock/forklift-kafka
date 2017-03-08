@@ -1,7 +1,6 @@
 package forklift.consumer;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -12,8 +11,6 @@ import forklift.connectors.MessageStream;
 import forklift.message.KafkaMessage;
 import org.junit.Before;
 import org.junit.Test;
-import javax.jms.JMSException;
-import javax.jms.Message;
 
 public class KafkaTopicConsumerTests {
 
@@ -48,7 +45,7 @@ public class KafkaTopicConsumerTests {
         assertEquals(message, result);
     }
 
-    @Test(expected=ConnectorException.class)
+    @Test(expected = ConnectorException.class)
     public void receiveWithControllerNotRunning() throws ConnectorException {
         when(this.controller.isRunning()).thenReturn(false);
         consumer.receive(100);

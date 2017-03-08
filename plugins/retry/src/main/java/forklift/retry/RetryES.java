@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.gson.JsonObject;
-import forklift.concurrent.Callback;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.MessageRunnable;
@@ -22,7 +21,6 @@ import io.searchbox.core.SearchResult;
 import io.searchbox.core.SearchResult.Hit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -33,15 +31,13 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import javax.jms.JMSException;
-
 /**
  * Handles retries for consumers that have been annotated with Retry
  * Utilizes elastic search to store retry data so that forklift can be ran on multiple nodes.
  * <br>
  * Properties: forklift-retry-max-retries-exceeded, forklift-retry-max-retries, forklift-retry-count
- * @author mconroy
  *
+ * @author mconroy
  */
 public class RetryES {
     private static final Logger log = LoggerFactory.getLogger(RetryES.class);
@@ -99,9 +95,9 @@ public class RetryES {
 
         final JestClientFactory factory = new JestClientFactory();
         factory.setHttpClientConfig(
-            new HttpClientConfig.Builder(prefix + hostname + ":" + port)
-               .multiThreaded(true)
-               .build());
+                        new HttpClientConfig.Builder(prefix + hostname + ":" + port)
+                                        .multiThreaded(true)
+                                        .build());
         client = factory.getObject();
 
         // Cleanup after a retry is completed.
@@ -132,10 +128,13 @@ public class RetryES {
                             try {
                                 final RetryMessage
                                                 retryMessage =
-                                                mapper.readValue(msg.source.get("forklift-retry-msg").getAsString(), RetryMessage.class);
+                                                mapper.readValue(msg.source.get("forklift-retry-msg").getAsString(),
+                                                                 RetryMessage.class);
                                 log.info("Retrying: {}", retryMessage);
                                 executor.schedule(new RetryRunnable(retryMessage, connector, cleanup),
-                                                  Long.parseLong(Integer.toString((int)retryMessage.getProperties().get("forklift-retry-timeout"))), TimeUnit.SECONDS);
+                                                  Long.parseLong(Integer.toString(
+                                                                  (int)retryMessage.getProperties().get("forklift-retry-timeout"))),
+                                                  TimeUnit.SECONDS);
                             } catch (Exception e) {
                                 log.error("Unable to read result {}", msg.source);
                             }
@@ -151,7 +150,7 @@ public class RetryES {
         }
     }
 
-    @LifeCycle(value=ProcessStep.Error, annotation=Retry.class)
+    @LifeCycle(value = ProcessStep.Error, annotation = Retry.class)
     public void msg(MessageRunnable mr, Retry retry) {
         final ForkliftMessage msg = mr.getMsg();
 
@@ -225,13 +224,7 @@ public class RetryES {
             fields.put("topic", mr.getConsumer().getTopic().value());
 
         // Generate the id from the correlation id first followed by the generated amq id.
-        String id = null;
-        try {
-            id = msg.getJmsMsg().getJMSCorrelationID();
-            if (id == null || "".equals(id))
-                id = msg.getJmsMsg().getJMSMessageID();
-        } catch (JMSException ignored) {
-        }
+        String id = msg.getId();
 
         try {
             final RetryMessage retryMsg = buildRetry(mr, retry, id);

@@ -4,7 +4,6 @@ import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
 import forklift.connectors.KafkaController;
 import forklift.connectors.MessageStream;
-import javax.jms.JMSException;
 
 /**
  * Retrieves messages from a kafka topic and adds consumer's topic to the {@link forklift.connectors.KafkaController}.
@@ -62,8 +61,6 @@ public class KafkaTopicConsumer implements ForkliftConsumerI {
      * Removes this consumer's topic from the controller.  Future calls to {@link #receive(long) receive} will re-add the
      * topic to the controller.
      * </p>
-     *
-     * @throws JMSException
      */
     @Override
     public void close() {

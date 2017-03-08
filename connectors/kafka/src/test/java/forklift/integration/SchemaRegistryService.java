@@ -31,7 +31,7 @@ public class SchemaRegistryService implements Runnable {
     @Override
     public void run() {
         Properties properties = new Properties();
-        properties.setProperty("listeners", "http://localhost:" + listenPort);
+        properties.setProperty("listeners", "http://0.0.0.0:" + listenPort);
         properties.setProperty("kafkastore.connection.url", "localhost:" + localZookeeperPort);
         properties.setProperty("kafkastore.topic", "_schemas");
         properties.setProperty("debug", "false");

@@ -25,14 +25,14 @@ public class IntegrationTest {
 
     @Before
     public void setup() throws ConnectorException {
-      //  this.connector = new KafkaConnector("localhost:29092", "http://localhost:28081", "app");
-      //  connector.start();
+        this.connector = new KafkaConnector("localhost:29092", "http://localhost:28081", "app");
+        connector.start();
     }
 
     @Ignore
     @After
     public void teardown() throws ConnectorException {
-        //connector.stop();
+        connector.stop();
     }
 
     @Ignore

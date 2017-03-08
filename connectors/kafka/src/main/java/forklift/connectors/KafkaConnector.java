@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
-import javax.jms.Connection;
 
 /**
  * Manages a {@link org.apache.kafka.clients.consumer.KafkaConsumer}.  A subscription is made whenever  a call to getQueue or get Topic
@@ -74,11 +73,15 @@ public class KafkaConnector implements ForkliftConnectorI {
     @Override
     public void stop() throws ConnectorException {
         try {
-            this.controller.stop(2000, TimeUnit.MILLISECONDS);
+            if (controller != null) {
+                this.controller.stop(2000, TimeUnit.MILLISECONDS);
+            }
         } catch (InterruptedException e) {
             log.error("KafkaConnector interrupted while stopping");
         }
-        this.kafkaProducer.close();
+        if (kafkaProducer != null) {
+            this.kafkaProducer.close();
+        }
     }
 
     @Override
