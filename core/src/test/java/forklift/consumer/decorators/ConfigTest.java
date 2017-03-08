@@ -4,8 +4,6 @@ package forklift.consumer.decorators;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
-
-import forklift.TestMsg;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.Consumer;
 import forklift.decorators.Config;
@@ -14,7 +12,6 @@ import forklift.properties.PropertiesManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
 import java.io.File;
 import java.util.Properties;
 
@@ -40,7 +37,7 @@ public class ConfigTest {
     public void testConfigInjection() {
         Consumer test = new Consumer(TestConsumer.class, null, this.getClass().getClassLoader());
         TestConsumer tc = new TestConsumer();
-        test.inject(new ForkliftMessage(new TestMsg("1")), tc);
+        test.inject(new ForkliftMessage("1"), tc);
         assertEquals(tc.all.get("value"), "a");
         assertEquals(tc.configTestProperties.get("value"), "a");
         assertEquals(tc.value, "a");
@@ -67,16 +64,16 @@ public class ConfigTest {
         @Config(CONF)
         String doesnotexist;
 
-        @Config(value=CONF, field="value")
+        @Config(value = CONF, field = "value")
         String specific;
 
-        @Config(value=CONF, field="DoesNotExist")
+        @Config(value = CONF, field = "DoesNotExist")
         String empty;
 
-        @Config(value=CONF, field="value")
+        @Config(value = CONF, field = "value")
         String overridden = "b";
 
-        @Config(value=CONF, field="DoesNotExist")
+        @Config(value = CONF, field = "DoesNotExist")
         String defaulted = "b";
     }
 }

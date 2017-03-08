@@ -1,7 +1,6 @@
 package forklift.consumer;
 
 import static org.junit.Assert.assertTrue;
-
 import forklift.TestMsg;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.lifecycle.BadAuditor;
@@ -10,15 +9,12 @@ import forklift.consumer.lifecycle.TestAuditor2;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
-import javax.jms.Message;
 
 public class LifeCycleMonitorsTest {
     private static final Logger log = LoggerFactory.getLogger(LifeCycleMonitorsTest.class);
@@ -40,7 +36,7 @@ public class LifeCycleMonitorsTest {
             public void run() {
                 threads.getAndIncrement();
                 for (int i = 0; i < 40; i++) {
-                    Message jmsMsg = new TestMsg("" + i);
+                    ForkliftMessage message = new TestMsg("" + i);
                     int next = new Random().nextInt(ProcessStep.values().length);
                     ProcessStep ps = ProcessStep.values()[next];
                     try {
@@ -48,7 +44,8 @@ public class LifeCycleMonitorsTest {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    LifeCycleMonitors.call(ps, new MessageRunnable(null, new ForkliftMessage(jmsMsg), null, null, null, null, null, null, Collections.emptyList()));
+                    LifeCycleMonitors.call(ps, new MessageRunnable(null, message, null, null, null, null, null, null,
+                                                                   Collections.emptyList()));
                 }
                 threads.getAndDecrement();
             }
@@ -66,7 +63,7 @@ public class LifeCycleMonitorsTest {
             public void run() {
                 lock.lock();
                 threads.getAndIncrement();
-                if (! registered.getAndSet(true)) {
+                if (!registered.getAndSet(true)) {
                     LifeCycleMonitors.register(TestAuditor2.class);
                     LifeCycleMonitors.deregister(TestAuditor2.class);
                     registered.getAndSet(false);
@@ -95,7 +92,7 @@ public class LifeCycleMonitorsTest {
         Thread.sleep(6000);
         new Thread(unregOrig).start();
 
-        synchronized(threads) {
+        synchronized (threads) {
             while (threads.get() > 0) {
                 threads.wait(1000);
             }
@@ -110,8 +107,9 @@ public class LifeCycleMonitorsTest {
 
         log.debug("The following generates an exception. This is expected.");
         // Now the validate listener should log out an error but should stop processing from happening.
-        Message jmsMsg = new TestMsg("1");
-        LifeCycleMonitors.call(ProcessStep.Validating, new MessageRunnable(null, new ForkliftMessage(jmsMsg), null, null, null, null, null, null, Collections.emptyList()));
+        ForkliftMessage message = new TestMsg("1");
+        LifeCycleMonitors.call(ProcessStep.Validating,
+                               new MessageRunnable(null, message, null, null, null, null, null, null, Collections.emptyList()));
         assertTrue("Make sure the exception was eaten and just logged.", true);
     }
 }

@@ -1,8 +1,6 @@
 package forklift.consumer;
 
 import static org.junit.Assert.fail;
-
-import forklift.TestMsg;
 import forklift.connectors.ForkliftMessage;
 import forklift.decorators.On;
 import forklift.decorators.OnMessage;
@@ -10,7 +8,6 @@ import forklift.decorators.OnValidate;
 import forklift.decorators.Queue;
 import org.junit.Assert;
 import org.junit.Test;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -196,13 +193,16 @@ public class OnDecoratorTest {
 
     @SuppressWarnings("unchecked")
     private static <T> void runTest(T c) {
-        final ForkliftMessage msg = new ForkliftMessage(new TestMsg("Message"));
+        final ForkliftMessage msg = new ForkliftMessage("Message");
         final Consumer consumer = new Consumer(c.getClass(), null);
         consumer.inject(msg, c);
-        List<Method> onMessage = (List<Method>) fetch(consumer, "onMessage");
-        List<Method> onValidate = (List<Method>) fetch(consumer, "onValidate");
-        Map<ProcessStep, List<Method>> onProcessStep = (Map<ProcessStep, List<Method>>) fetch(consumer, "onProcessStep");
-        final MessageRunnable mr = new MessageRunnable(consumer, msg, consumer.getClass().getClassLoader(), c, onMessage, onValidate, null, onProcessStep, Collections.emptyList());
+        List<Method> onMessage = (List<Method>)fetch(consumer, "onMessage");
+        List<Method> onValidate = (List<Method>)fetch(consumer, "onValidate");
+        Map<ProcessStep, List<Method>> onProcessStep = (Map<ProcessStep, List<Method>>)fetch(consumer, "onProcessStep");
+        final MessageRunnable
+                        mr =
+                        new MessageRunnable(consumer, msg, consumer.getClass().getClassLoader(), c, onMessage, onValidate, null,
+                                            onProcessStep, Collections.emptyList());
         mr.run();
     }
 
