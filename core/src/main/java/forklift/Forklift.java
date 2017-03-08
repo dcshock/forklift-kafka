@@ -3,7 +3,6 @@ package forklift;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.consumer.ConsumerDeploymentEvents;
-import forklift.deployment.DeploymentWatch;
 import forklift.exception.StartupException;
 
 import org.slf4j.Logger;
@@ -64,7 +63,6 @@ public class Forklift {
     public static void main(String args[])
       throws StartupException {
         final Forklift forklift = new Forklift();
-        final DeploymentWatch deployWatch = new DeploymentWatch(new File("/tmp"), new ConsumerDeploymentEvents(forklift));
         // TODO - get connector from a config file.
 
         if (!forklift.isRunning())
