@@ -1,7 +1,6 @@
 package forklift.connectors;
 
 import forklift.message.Header;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,8 +18,8 @@ public class ForkliftMessage {
         this.setMsg(msg);
     }
 
-    public void acknowledge() throws ConnectorException {
-
+    public boolean acknowledge() throws ConnectorException {
+        return true;
     }
 
     public String getMsg() {

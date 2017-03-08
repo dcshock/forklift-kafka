@@ -6,7 +6,6 @@ import forklift.connectors.ForkliftMessage;
 import forklift.producers.ForkliftProducerI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -57,10 +56,14 @@ public class MessageRunnable implements Runnable {
     public void run() {
         RunAsClassLoader.run(classLoader, () -> {
             // Always ack message to prevent activemq deadlock
+            boolean acknowledged = false;
             try {
-                msg.acknowledge();
+                acknowledged = msg.acknowledge();
             } catch (ConnectorException e) {
                 log.error("Error while acking message.", e);
+                acknowledged = false;
+            }
+            if (!acknowledged) {
                 close();
                 return;
             }
@@ -116,24 +119,24 @@ public class MessageRunnable implements Runnable {
                                     else
                                         respMsg.setMsg(consumer.mapper.writeValueAsString(obj));
                                     switch (uri.getScheme()) {
-                                        case "queue":
-                                            try (ForkliftProducerI producer = consumer.getConnector().getQueueProducer(uri.getHost())) {
-                                                System.out.println("Sending: " + respMsg.getMsg());
-                                                producer.send(respMsg);
-                                            }
-                                            break;
-                                        case "topic":
-                                            try (ForkliftProducerI producer = consumer.getConnector().getTopicProducer(uri.getHost())) {
-                                                producer.send(respMsg);
-                                            }
-                                            break;
-                                        case "http":
-                                            // Fall through to https
-                                        case "https":
-                                            break;
-                                        default:
-                                            log.warn("Unable to find mapping for response uri scheme {}", uri.getScheme());
-                                            break;
+                                    case "queue":
+                                        try (ForkliftProducerI producer = consumer.getConnector().getQueueProducer(uri.getHost())) {
+                                            System.out.println("Sending: " + respMsg.getMsg());
+                                            producer.send(respMsg);
+                                        }
+                                        break;
+                                    case "topic":
+                                        try (ForkliftProducerI producer = consumer.getConnector().getTopicProducer(uri.getHost())) {
+                                            producer.send(respMsg);
+                                        }
+                                        break;
+                                    case "http":
+                                        // Fall through to https
+                                    case "https":
+                                        break;
+                                    default:
+                                        log.warn("Unable to find mapping for response uri scheme {}", uri.getScheme());
+                                        break;
                                     }
                                     return null;
                                 });
@@ -184,6 +187,7 @@ public class MessageRunnable implements Runnable {
 
     /**
      * Set logging to warn only. This allows exceptions that would normally be logged as error to be warnings.
+     *
      * @param b
      */
     public void setWarnOnly(boolean b) {
@@ -205,6 +209,7 @@ public class MessageRunnable implements Runnable {
     private interface DangerousSupplier<T> {
         T get() throws Throwable;
     }
+
     private <T> T runLoggingErrors(DangerousSupplier<T> func) {
         try {
             return func.get();
