@@ -1,6 +1,7 @@
 package forklift.consumer;
 
 import forklift.classloader.RunAsClassLoader;
+import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
 import forklift.producers.ForkliftProducerI;
 import org.slf4j.Logger;
@@ -15,8 +16,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import javax.jms.JMSException;
 
 public class MessageRunnable implements Runnable {
     private static final Logger log = LoggerFactory.getLogger(MessageRunnable.class);
@@ -59,8 +58,8 @@ public class MessageRunnable implements Runnable {
         RunAsClassLoader.run(classLoader, () -> {
             // Always ack message to prevent activemq deadlock
             try {
-                msg.getJmsMsg().acknowledge();
-            } catch (JMSException e) {
+                msg.acknowledge();
+            } catch (ConnectorException e) {
                 log.error("Error while acking message.", e);
                 close();
                 return;

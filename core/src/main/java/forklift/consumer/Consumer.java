@@ -209,7 +209,7 @@ public class Consumer {
             // Always cleanup the consumer.
             if (consumer != null)
                 consumer.close();
-        } catch (ConnectorException | ConnectorException e) {
+        } catch (ConnectorException e) {
             log.debug("", e);
         }
     }
@@ -223,16 +223,13 @@ public class Consumer {
             running.set(true);
 
             while (running.get()) {
-                Message jmsMsg;
-                while ((jmsMsg = consumer.receive(2500)) != null && running.get()) {
-                    final ForkliftMessage msg = connector.jmsToForklift(jmsMsg);
+                ForkliftMessage msg;
+                while ((msg = consumer.receive(2500)) != null && running.get()) {
                     try {
                         final Object handler = msgHandler.newInstance();
 
-                        final List<Closeable> closeMe = new ArrayList<>();
-                        RunAsClassLoader.run(classLoader, () -> {
-                            closeMe.addAll(inject(msg, handler));
-                        });
+                        // Inject dependencies into the consumer handler.
+                        final List<Closeable> closeMe = inject(msg, handler);
 
                         // Create the runner that will ultimately run the handler.
                         final MessageRunnable runner = new MessageRunnable(this, msg, classLoader, handler, onMessage, onValidate, onResponse, onProcessStep, closeMe);
@@ -285,7 +282,7 @@ public class Consumer {
                             threadPool.execute(runner);
                         else
                             runner.run();
-                    } catch (ConnectorException e) {
+                    } catch (Exception e) {
                         // If this error occurs we had a massive problem with the conusmer class setup.
                         log.error("Consumer couldn't be used.", e);
 
@@ -305,7 +302,7 @@ public class Consumer {
                 threadPool.awaitTermination(60, TimeUnit.SECONDS);
                 blockQueue.clear();
             }
-        } catch (Exception e) {
+        } catch (ConnectorException e) {
             running.set(false);
             log.error("JMS Error in message loop: ", e);
         } catch (InterruptedException ignored) {

@@ -5,10 +5,7 @@ import forklift.message.Header;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.jms.Message;
-
 public class ForkliftMessage {
-    private Message jmsMsg;
     private String msg;
     private boolean flagged;
     private String warning;
@@ -18,16 +15,12 @@ public class ForkliftMessage {
     public ForkliftMessage() {
     }
 
-    public ForkliftMessage(Message jmsMsg) {
-        this.jmsMsg = jmsMsg;
-    }
-
     public ForkliftMessage(String msg) {
         this.setMsg(msg);
     }
 
-    public Message getJmsMsg() {
-        return jmsMsg;
+    public void acknowledge() throws ConnectorException {
+
     }
 
     public String getMsg() {
