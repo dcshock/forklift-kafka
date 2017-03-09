@@ -1,9 +1,0 @@
-{
-  "namespace": "com.sofi.avro.schemas2",
-  "type": "record",
-  "version": 1,
-  "name": "Test",
-  "fields": [
-    {"name": "name", "type": "string"}
-  ]
-}

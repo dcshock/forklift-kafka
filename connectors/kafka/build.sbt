@@ -4,6 +4,8 @@ name := "forklift-kafka"
 
 version := "0.1"
 
+scalaVersion := "2.11.7"
+
 // target and Xlint cause sbt dist to fail
 javacOptions ++= Seq("-source", "1.8")//, "-target", "1.8", "-Xlint")
 
@@ -22,8 +24,8 @@ libraryDependencies ++= Seq(
   "org.apache.kafka" % "kafka-clients" % "0.10.1.1-cp1" exclude("org.slf4j","slf4j-log4j12"),
   "io.confluent" % "kafka-avro-serializer" % "3.1.1" exclude("org.slf4j","slf4j-log4j12"),
   "io.confluent" % "kafka-schema-registry" % "3.1.1" exclude("org.slf4j","slf4j-log4j12"),
-  "org.apache.zookeeper" % "zookeeper" % "3.4.9" exclude("org.slf4j","slf4j-log4j12"),
-  "org.apache.avro" % "avro" % "1.8.1"
+  "org.apache.avro" % "avro" % "1.8.1",
+  "org.apache.zookeeper" % "zookeeper" % "3.4.9" exclude("org.slf4j","slf4j-log4j12")
 
 )
 
@@ -34,6 +36,13 @@ lazy val testDependencies = Seq(
   "org.mockito"       % "mockito-core"            % "1.9.5"
 )
 
+
+// avro settings
+(javaSource in avroConfig) := baseDirectory(_/"target/generated-sources/").value
+(sourceDirectory in avroConfig) := baseDirectory(_/"src/schemas").value
+
+(compile in Compile) := ((compile in Compile) dependsOn (clean in Compile)).value
+
 libraryDependencies ++= testDependencies.map(_ % "test")
 
 resolvers ++= Seq(
@@ -43,13 +52,6 @@ resolvers ++= Seq(
   "Fuse" at "http://repo.fusesource.com/nexus/content/groups/public",
   "Confluent Maven Repo" at "http://packages.confluent.io/maven/"
 )
-// avro settings
-(javaSource in avroConfig) := baseDirectory(_/"target/generated-sources/").value
-(sourceDirectory in avroConfig) := baseDirectory(_/"src/test/schemas").value
-(version in avroConfig) := "1.8.1"
-
-
-
 
 // Remove scala dependency for pure Java libraries
 autoScalaLibrary := false
@@ -58,36 +60,3 @@ autoScalaLibrary := false
 crossPaths := false
 
 publishMavenStyle := true
-
-publishTo := {
-  val nexus = "https://oss.sonatype.org/"
-  if (isSnapshot.value)
-    Some("snapshots" at nexus + "content/repositories/snapshots")
-  else
-    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
-}
-
-pomIncludeRepository := { _ => false }
-
-pomExtra := (
-  <url>https://github.com/dcshock/forklift</url>
-    <licenses>
-      <license>
-        <name>BSD-style</name>
-        <url>http://www.opensource.org/licenses/bsd-license.php</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-    <scm>
-      <url>git@github.com:dcshock/forklift.git</url>
-      <connection>scm:git:git@github.com:dcshock/forklift.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <id>dcshock</id>
-        <name>Matt Conroy</name>
-        <url>http://www.mattconroy.com</url>
-      </developer>
-    </developers>)
-
-useGpg := true
