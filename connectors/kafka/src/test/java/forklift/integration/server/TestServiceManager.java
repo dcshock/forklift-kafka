@@ -1,8 +1,11 @@
-package forklift.integration;
+package forklift.integration.server;
 
 import forklift.Forklift;
 import forklift.connectors.KafkaConnector;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.net.telnet.TelnetClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -15,6 +18,7 @@ import java.util.concurrent.Executors;
  * @author afrieze
  */
 public class TestServiceManager {
+    private static final Logger log = LoggerFactory.getLogger(TestServiceManager.class);
     private static ExecutorService executor = Executors.newFixedThreadPool(3);
     private static final Object lock = new Object();
     private static Integer count = 0;
@@ -23,6 +27,7 @@ public class TestServiceManager {
     private static SchemaRegistryService schemaRegistry;
     private static KafkaConnector connector;
     private static Forklift forklift;
+    private static TelnetClient telnet;
 
     public static void start() {
         synchronized (lock) {
@@ -32,22 +37,21 @@ public class TestServiceManager {
             try {
                 int zookeeperPort = 42181;
                 int kafkaPort = 49092;
-                int schemaPort = 48081;
+                int schemaPort = 58081;
                 zookeeper = new ZookeeperService(zookeeperPort);
                 kafka = new KafkaService(zookeeperPort, kafkaPort);
                 schemaRegistry = new SchemaRegistryService(zookeeperPort, schemaPort);
                 executor.execute(zookeeper);
-                Thread.sleep(1000);
+                TestServiceManager.waitService("127.0.0.1", zookeeperPort);
                 executor.execute(kafka);
-                Thread.sleep(1000);
+                TestServiceManager.waitService("127.0.0.1", kafkaPort);
                 executor.execute(schemaRegistry);
-                Thread.sleep(1000);
+                TestServiceManager.waitService("127.0.0.1", schemaPort);
 
                 // Verify that we can get a kafka connection to the broker.
-                String kafkaUri = "localhost:" + kafkaPort;
-                String schemaUrl = "http://localhost:" + schemaPort;
+                String kafkaUri = "127.0.0.1:49092";
+                String schemaUrl = "http://127.0.0.1:58081";
                 connector = new KafkaConnector(kafkaUri, schemaUrl, "testGroup");
-                connector.start();
 
                 forklift = new Forklift();
                 forklift.start(connector);
@@ -57,6 +61,19 @@ public class TestServiceManager {
                 e.printStackTrace();
             }
         }
+    }
+
+    private static void waitService(String host, int port) throws InterruptedException {
+        telnet = new TelnetClient();
+        int triesLeft = 100;
+        while (triesLeft > 0)
+            try {
+                telnet.connect(host, port);
+                triesLeft = 0;
+            } catch (Exception e) {
+                Thread.sleep(50);
+                triesLeft--;
+            }
     }
 
     public static void stop() {
@@ -69,17 +86,19 @@ public class TestServiceManager {
             // Kill the broker and cleanup the testing data.
             try {
                 forklift.shutdown();
-                Thread.sleep(1500);
                 schemaRegistry.stop();
-                Thread.sleep(1500);
                 kafka.stop();
-                Thread.sleep(1500);
                 zookeeper.stop();
-                Thread.sleep(1500);
-                FileUtils.deleteDirectory(kafka.getDataDirectoryFile());
-                FileUtils.deleteDirectory(zookeeper.getDataDirectoryFile());
             } catch (Throwable e) {
                 e.printStackTrace();
+            } finally {
+
+                try {
+                    FileUtils.deleteDirectory(kafka.getDataDirectoryFile());
+                    FileUtils.deleteDirectory(zookeeper.getDataDirectoryFile());
+                } catch (Exception e) {
+
+                }
             }
         }
     }

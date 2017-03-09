@@ -143,8 +143,9 @@ public class KafkaController {
                     }
                     synchronized (topicsMonitor) {
                         //recheck wait condition inside synchronized block
-                        if (topics.size() == 0) {
+                        while (topics.size() == 0) {
                             //pause the polling thread until a topic comes in
+                            log.debug("Control-Loop waiting for topic");
                             topicsMonitor.wait();
                         }
                     }
@@ -154,12 +155,13 @@ public class KafkaController {
                     kafkaConsumer.subscribe(topics, new RebalanceListener());
                     updatedAssignment = true;
                 }
+                log.debug("Control-Loop polling");
                 ConsumerRecords<?, ?> records = kafkaConsumer.poll(100);
                 if (updatedAssignment) {
                     this.acknowlegmentHandler.addPartitions(kafkaConsumer.assignment());
                 }
                 if (records.count() > 0) {
-                    log.debug("Adding: " + records.count() + " to record stream");
+                    log.debug("Control-Loop adding: " + records.count() + " to record stream");
                     messageStream.addRecords(consumerRecordsToKafkaMessages(records));
                 }
                 Map<TopicPartition, OffsetAndMetadata> offsetData = this.acknowlegmentHandler.flushAcknowledged();
@@ -171,19 +173,19 @@ public class KafkaController {
                                                             "partition: " + entry.getKey().partition() + ", " +
                                                             "offset: " + entry.getValue().offset())
                                               .collect(Collectors.joining("|"));
-                    log.debug("Commiting offsets {}", offsetDescription);
+                    log.debug("Control-Loop Commiting offsets {}", offsetDescription);
                     kafkaConsumer.commitSync(offsetData);
                 }
             }
         } catch (WakeupException | InterruptedException e) {
-            log.info("Control Loop exiting");
+            log.info("Control-Loop exiting");
         } catch (Throwable t) {
-            log.error("Control Loop error, exiting", t);
+            log.error("Control-Loop error, exiting", t);
             throw t;
         } finally {
             running = false;
             //the kafkaConsumer must be closed in the poll thread
-            log.info("KafkaConsumer closing");
+            log.info("Control-Loop closing kafkaConsumer");
             kafkaConsumer.close();
         }
     }
@@ -200,7 +202,7 @@ public class KafkaController {
 
     private class RebalanceListener implements ConsumerRebalanceListener {
         @Override public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-            log.debug("Partitions revoked");
+            log.debug("Control-Loop partitions revoked");
             try {
                 Map<TopicPartition, OffsetAndMetadata>
                                 removedOffsetData =
@@ -208,14 +210,14 @@ public class KafkaController {
 
                 kafkaConsumer.commitSync(removedOffsetData);
             } catch (InterruptedException e) {
-                log.info("Partition rebalance interrupted", e);
+                log.info("Control-Loop partition rebalance interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }
 
         @Override
         public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-            log.debug("partitions assigned");
+            log.debug("Control-Loop partitions assigned");
             acknowlegmentHandler.addPartitions(partitions);
         }
 

@@ -24,14 +24,17 @@ public class MessageStream {
      * <p>
      * <strong>Note:</strong> All passed in records must belong to a topic added through a call to {@link #addTopic(String)}.
      *
-     * @throws IllegalStateException if the capacity of a stream has been exceeded.
      * @param records the records to add
+     * @throws IllegalStateException if the capacity of a stream has been exceeded.
      */
     public void addRecords(Map<TopicPartition, List<KafkaMessage>> records) {
         log.debug("Adding records to stream");
         for (TopicPartition partition : records.keySet()) {
             for (KafkaMessage message : records.get(partition)) {
-                topicQueue.get(partition.topic()).add(message);
+                BlockingQueue<KafkaMessage> queue = topicQueue.get(partition.topic());
+                if (queue != null) {
+                    queue.add(message);
+                }
             }
         }
     }

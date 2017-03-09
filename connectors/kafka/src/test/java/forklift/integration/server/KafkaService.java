@@ -1,4 +1,4 @@
-package forklift.integration;
+package forklift.integration.server;
 
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServerStartable;
@@ -33,7 +33,7 @@ public class KafkaService implements Runnable {
         properties.setProperty("socket.receive.buffer.bytes", "102400");
         properties.setProperty("socket.request.max.bytes", "104857600");
         properties.setProperty("log.dirs", dataDir.getAbsolutePath());
-        properties.setProperty("num.partitions", "1");
+        properties.setProperty("num.partitions", "16");
         properties.setProperty("num.recovery.threads.per.data.dir", "1");
         properties.setProperty("log.retention.hours", "168");
         properties.setProperty("log.segment.bytes", "1073741824");

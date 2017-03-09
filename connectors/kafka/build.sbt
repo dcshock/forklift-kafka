@@ -29,6 +29,7 @@ libraryDependencies ++= Seq(
 lazy val testDependencies = Seq(
   "commons-io" % "commons-io" % "2.4" ,
   "com.novocode" % "junit-interface" % "0.11",
+  "commons-net" % "commons-net" % "3.6",
   "org.mockito"       % "mockito-core"            % "1.9.5"
 )
 

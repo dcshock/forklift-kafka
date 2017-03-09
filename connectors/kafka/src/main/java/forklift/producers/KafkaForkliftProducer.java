@@ -23,8 +23,8 @@ public class KafkaForkliftProducer implements ForkliftProducerI {
 
     private final String topic;
     private final KafkaProducer<?, ?> kafkaProducer;
-    static ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule())
-                                                   .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule())
+                                                                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String stringSchema = "{\"type\":\"record\"," +
                           "\"name\":\"ForkliftStringMessage\"," +
                           "\"fields\":[{\"name\":\"forkliftMsg\",\"type\":\"string\"}]}";

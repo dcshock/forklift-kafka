@@ -139,29 +139,6 @@ public class KafkaControllerTests {
         assertTrue(subscribeCaptor.getValue().contains(topic1));
     }
 
-    /**
-     * Tests that the controller stops running if an error is encountered putting messages on the stream
-     *
-     * @throws InterruptedException
-     */
-    @Test
-    public void shutdownOnMessageStreamError() throws InterruptedException {
-        String topic1 = "topic1";
-        ConsumerRecord record1 = generateRecord(topic1, 1,"value1", 1);
-        Map<TopicPartition, List<ConsumerRecord>> recordMap = new HashMap<>();
-        List<ConsumerRecord> topicRecords = new ArrayList<>();
-        topicRecords.add(record1);
-        recordMap.put(new TopicPartition(topic1, 1), topicRecords);
-        ConsumerRecords records = new ConsumerRecords(recordMap);
-        when(kafkaConsumer.poll(anyLong())).thenReturn(records);
-        doThrow(new IllegalStateException()).when(messageStream).addRecords(any());
-        this.controller.start();
-        this.controller.addTopic(topic1);
-        verify(kafkaConsumer, timeout(200).times(1)).subscribe(subscribeCaptor.capture(), any());
-        Thread.sleep(50);
-        assertEquals(false, controller.isRunning());
-    }
-
     private ConsumerRecord<?, ?> generateRecord(String topic, int partition, String value, long offset) {
         return new ConsumerRecord<Object, Object>(topic, partition, offset, null, value);
     }

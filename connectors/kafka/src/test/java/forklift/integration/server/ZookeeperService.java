@@ -1,4 +1,4 @@
-package forklift.integration;
+package forklift.integration.server;
 
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;

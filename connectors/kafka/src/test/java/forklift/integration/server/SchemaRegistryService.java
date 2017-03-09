@@ -1,4 +1,4 @@
-package forklift.integration;
+package forklift.integration.server;
 
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryConfig;
 import io.confluent.kafka.schemaregistry.rest.SchemaRegistryRestApplication;
@@ -31,10 +31,11 @@ public class SchemaRegistryService implements Runnable {
     @Override
     public void run() {
         Properties properties = new Properties();
-        properties.setProperty("listeners", "http://0.0.0.0:" + listenPort);
+        properties.setProperty("listeners", "http://localhost:" + listenPort);
         properties.setProperty("kafkastore.connection.url", "localhost:" + localZookeeperPort);
-        properties.setProperty("kafkastore.topic", "_schemas");
-        properties.setProperty("debug", "false");
+        properties.setProperty("host.name", "localhost");
+        //properties.setProperty("kafkastore.topic", "_schemas");
+        //properties.setProperty("debug", "false");
         try {
             SchemaRegistryConfig config = new SchemaRegistryConfig(properties);
             SchemaRegistryRestApplication app = new SchemaRegistryRestApplication(config);
@@ -42,7 +43,7 @@ public class SchemaRegistryService implements Runnable {
             server.start();
             server.join();
         } catch (Exception e) {
-            log.error("Unable to start Schema Registry");
+            log.error("Unable to start Schema Registry", e);
         }
     }
 }

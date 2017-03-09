@@ -1,8 +1,5 @@
 package forklift.connectors;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import forklift.consumer.ForkliftConsumerI;
 import forklift.consumer.KafkaTopicConsumer;
 import forklift.producers.ForkliftProducerI;
@@ -27,10 +24,7 @@ public class KafkaConnector implements ForkliftConnectorI {
     private KafkaConsumer<?, ?> kafkaConsumer;
     private KafkaProducer<?, ?> kafkaProducer;
     private MessageStream messageStream = new MessageStream();
-
-    static ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule())
-                                                   .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    KafkaController controller;
+    private KafkaController controller;
 
     public KafkaConnector(String kafkaHosts, String schemaRegistries, String groupId) {
         this.kafkaHosts = kafkaHosts;
@@ -64,7 +58,7 @@ public class KafkaConnector implements ForkliftConnectorI {
         props.put("value.deserializer", io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
         props.put("schema.registry.url", schemaRegistries);
         props.put("specific.avro.reader", false);
-        //props.put("auto.offset.reset", "earliest");
+        props.put("auto.offset.reset", "earliest");
         this.kafkaConsumer = new KafkaConsumer(props);
         this.controller = new KafkaController(kafkaConsumer, messageStream);
         return controller;
