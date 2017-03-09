@@ -167,6 +167,7 @@ public class IntegrationTest {
         // Start the consumer.
         c.listen();
         assertTrue(called.get() == msgCount);
+        com.sofi.avro.schemas1.Test t;
     }
 
     @Test
