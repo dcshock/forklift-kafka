@@ -1,6 +1,7 @@
 package forklift.integration;
 
 import static org.junit.Assert.assertTrue;
+import com.github.dcshock.avro.schemas.AvroMessage;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.Consumer;
@@ -17,6 +18,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class IntegrationTest {
@@ -44,6 +47,26 @@ public class IntegrationTest {
             }
             int i = called.getAndIncrement();
             System.out.println(Thread.currentThread().getName() + value);
+            isInjectNull = injectedProducer != null ? false : true;
+        }
+    }
+
+    @Queue("forklift-avro-topic")
+    public static class ForkliftAvroConsumer {
+
+        @forklift.decorators.Message
+        private AvroMessage value;
+
+        @Producer(queue = "forklift-avro-topic")
+        private ForkliftProducerI injectedProducer;
+
+        @OnMessage
+        public void onMessage() {
+            if (value == null) {
+                return;
+            }
+            int i = called.getAndIncrement();
+            System.out.println(Thread.currentThread().getName() + value.getName());
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
@@ -151,6 +174,26 @@ public class IntegrationTest {
 
 
     @Test
+    public void testAvroMessage() throws ProducerException, ConnectorException, InterruptedException {
+        int msgCount = 10;
+        ForkliftProducerI producer = TestServiceManager.getConnector().getQueueProducer("forklift-avro-topic");
+        for (int i = 0; i < msgCount; i++) {
+            AvroMessage avroMessage = new AvroMessage();
+            avroMessage.setName("Avro Message Name");
+            producer.send(avroMessage);
+        }
+        final Consumer c = new Consumer(ForkliftAvroConsumer.class, TestServiceManager.getConnector());
+        // Shutdown the consumer after all the messages have been processed.
+        c.setOutOfMessages((listener) -> {
+            listener.shutdown();
+            assertTrue("called was not == " + msgCount, called.get() == msgCount);
+        });
+        // Start the consumer.
+        c.listen();
+        assertTrue(called.get() == msgCount);
+    }
+
+    @Test
     public void testStringMessage() throws ProducerException, ConnectorException, InterruptedException {
         int msgCount = 10;
         ForkliftProducerI producer = TestServiceManager.getConnector().getQueueProducer("forklift-string-topic");
@@ -167,7 +210,6 @@ public class IntegrationTest {
         // Start the consumer.
         c.listen();
         assertTrue(called.get() == msgCount);
-        com.sofi.avro.schemas1.Test t;
     }
 
     @Test
@@ -235,5 +277,7 @@ public class IntegrationTest {
 
         assertTrue(called.get() == msgCount);
     }
+    
+
 
 }
