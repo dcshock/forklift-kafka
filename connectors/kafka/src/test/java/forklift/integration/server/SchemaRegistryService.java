@@ -26,6 +26,7 @@ public class SchemaRegistryService implements Runnable {
 
     public void stop() throws Exception {
         server.stop();
+        Thread.sleep(1500);
     }
 
     @Override

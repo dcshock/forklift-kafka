@@ -184,6 +184,12 @@ public class KafkaController {
             throw t;
         } finally {
             running = false;
+            try {
+                Map<TopicPartition, OffsetAndMetadata> offsetData = this.acknowlegmentHandler.flushAcknowledged();
+                kafkaConsumer.commitSync(offsetData);
+            } catch (InterruptedException e) {
+                log.info("Control-Loop failed to commit offsets on shutdown", e);
+            }
             //the kafkaConsumer must be closed in the poll thread
             log.info("Control-Loop closing kafkaConsumer");
             kafkaConsumer.close();

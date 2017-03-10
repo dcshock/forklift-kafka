@@ -34,6 +34,11 @@ public class KafkaConnector implements ForkliftConnectorI {
 
     @Override
     public void start() throws ConnectorException {
+        this.controller = createController();
+        this.controller.start();
+    }
+
+    private KafkaProducer createKafkaProducer() {
 
         Properties producerProperties = new Properties();
         producerProperties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaHosts);
@@ -43,9 +48,8 @@ public class KafkaConnector implements ForkliftConnectorI {
                                io.confluent.kafka.serializers.KafkaAvroSerializer.class);
         //schema.registry.url is a comma separated list of urls
         producerProperties.put("schema.registry.url", schemaRegistries);
-        this.kafkaProducer = new KafkaProducer(producerProperties);
-        this.controller = createController();
-        this.controller.start();
+        kafkaProducer = new KafkaProducer(producerProperties);
+        return kafkaProducer;
     }
 
     private KafkaController createController() {
@@ -101,6 +105,11 @@ public class KafkaConnector implements ForkliftConnectorI {
 
     @Override
     public ForkliftProducerI getTopicProducer(String name) {
+        synchronized (this) {
+            if (this.kafkaProducer == null) {
+                this.kafkaProducer = createKafkaProducer();
+            }
+        }
         return new KafkaForkliftProducer(name, this.kafkaProducer);
     }
 

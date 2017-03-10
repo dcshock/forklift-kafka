@@ -47,7 +47,7 @@ public class KafkaService implements Runnable {
 
     public void stop() throws InterruptedException, IOException {
         kafka.shutdown();
-        Thread.sleep(500);
+        Thread.sleep(1500);
     }
 
     public File getDataDirectoryFile() {

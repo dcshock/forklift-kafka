@@ -47,7 +47,7 @@ public class ZookeeperService implements Runnable {
     public void stop() throws InterruptedException, IOException {
         server.shutdown();
         runningThread.interrupt();
-        Thread.sleep(500);
+        Thread.sleep(1500);
     }
 
     public File getDataDirectoryFile() {
