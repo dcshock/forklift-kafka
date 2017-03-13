@@ -39,10 +39,6 @@ public class IntegrationTest {
     private static AtomicInteger called = new AtomicInteger(0);
     private static boolean isInjectNull = true;
     TestServiceManager serviceManager;
-//    private static boolean ordered = true;
-//    private static boolean isPropsSet = false;
-//    private static boolean isHeadersSet = false;
-//    private static boolean isPropOverwritten = true;
 
 
     @After
@@ -88,8 +84,12 @@ public class IntegrationTest {
         ForkliftProducerI
                         producer =
                         connector.getQueueProducer("forklift-string-topic");
+        HashMap<String, Object> properties = new HashMap<>();
         for (int i = 0; i < msgCount; i++) {
             String msg = new String("sending all the text, producer test");
+            Map<String, Object> props = new HashMap<>();
+            props.put("Foo", "bar");
+            props.put("Eye", "" + i);
             producer.send(msg);
         }
         final Consumer c = new Consumer(StringConsumer.class, connector);
@@ -356,26 +356,6 @@ public class IntegrationTest {
         }
     }
 
-    @Queue("forklift-message-topic")
-    public static class ForkliftMessageConsumer {
-
-        @forklift.decorators.Message
-        private ForkliftMessage message;
-
-        @Producer(queue = "forklift-string-topic")
-        private ForkliftProducerI injectedProducer;
-
-        @OnMessage
-        public void onMessage() {
-            if (message == null || message.getMsg() == null) {
-                return;
-            }
-            int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + message.getMsg());
-            isInjectNull = injectedProducer != null ? false : true;
-        }
-    }
-
     @Queue("forklift-map-topic")
     public static class ForkliftMapConsumer {
 
@@ -395,6 +375,7 @@ public class IntegrationTest {
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
+
 
     @Queue("forklift-object-topic")
     public static class ForkliftObjectConsumer {

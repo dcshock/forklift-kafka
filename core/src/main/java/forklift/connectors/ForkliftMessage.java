@@ -10,7 +10,7 @@ public class ForkliftMessage {
     private boolean flagged;
     private String warning;
     private Map<Header, Object> headers = new HashMap<>();
-    private Map<String, Object> properties = new HashMap<>();
+    private Map<String, String> properties = new HashMap<>();
 
     public ForkliftMessage() {
     }
@@ -62,14 +62,14 @@ public class ForkliftMessage {
         return headers;
     }
 
-    public void setProperties(Map<String, Object> properties) {
+    public void setProperties(Map<String, String> properties) {
         // Get rid of unmodifiable.
-        final Map<String, Object> newProps = new HashMap<>();
+        final Map<String, String> newProps = new HashMap<>();
         properties.keySet().stream().forEach(key -> newProps.put(key, properties.get(key)));
         this.properties = newProps;
     }
 
-    public Map<String, Object> getProperties() {
-        return properties;
+    public Map<String, String> getProperties() {
+        return this.properties;
     }
 }

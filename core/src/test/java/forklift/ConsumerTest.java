@@ -123,11 +123,11 @@ public class ConsumerTest {
         headers.put(Header.CorrelationId, "abcd");
         msg.setHeaders(headers);
 
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("my-cool-prop", new Integer(3));
+        Map<String, String> properties = new HashMap<>();
+        properties.put("my-cool-prop", "3");
         properties.put("mystrval", "blah");
-        properties.put("my-long-val", new Long(123123));
-        properties.put("my-float-val", new Float(123123));
+        properties.put("my-long-val", "123123");
+        properties.put("my-float-val", "123123");
         msg.setProperties(properties);
 
         test.inject(msg, ec);

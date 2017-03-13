@@ -414,7 +414,7 @@ public class Consumer {
                             }
                         } else if (decorator == forklift.decorators.Properties.class) {
                             forklift.decorators.Properties annotation = f.getAnnotation(forklift.decorators.Properties.class);
-                            Map<String, Object> properties = msg.getProperties();
+                            Map<String, String> properties = msg.getProperties();
                             if (clazz == Map.class) {
                                 f.set(instance, msg.getProperties());
                             } else if (properties != null) {

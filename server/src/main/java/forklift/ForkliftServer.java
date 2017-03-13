@@ -50,7 +50,6 @@ public final class ForkliftServer {
     // Consumer deployment interval
     private static int SLEEP_INTERVAL = 10000; // 10 seconds
 
-    private static BrokerService broker = null;
     private final ForkliftOpts opts;
     private Forklift forklift;
 

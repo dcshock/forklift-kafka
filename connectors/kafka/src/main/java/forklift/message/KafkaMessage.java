@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
 import forklift.connectors.KafkaController;
+import forklift.consumer.parser.KeyValueParser;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import java.util.HashMap;
@@ -13,7 +14,6 @@ import java.util.Map;
 public class KafkaMessage extends ForkliftMessage {
     private final KafkaController controller;
     private final ConsumerRecord<?, ?> consumerRecord;
-    Map<String, Object> properties = new HashMap<>();
 
     public KafkaMessage(KafkaController controller, ConsumerRecord<?, ?> consumerRecord) {
         this.controller = controller;
@@ -45,6 +45,10 @@ public class KafkaMessage extends ForkliftMessage {
     private final void parseRecord() {
         if (consumerRecord.value() instanceof GenericRecord) {
             GenericRecord genericRecord = (GenericRecord)consumerRecord.value();
+            Object properties = genericRecord.get("forkliftProperties");
+            if(properties != null){
+                this.setProperties(KeyValueParser.parse(properties.toString()));
+            }
             Object value = genericRecord.get("forkliftMapMsg");
             value = value == null ? genericRecord.get("forkliftMsg") : value;
             value = value == null ? genericRecord.get("forkliftJsonMsg") : value;
