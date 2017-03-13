@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import forklift.connectors.ForkliftMessage;
-import forklift.message.Header;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
@@ -46,7 +45,7 @@ public class KafkaForkliftProducer implements ForkliftProducerI {
     private Schema parsedMapSchema = null;
     private Schema parsedJsonSchema = null;
 
-    private Map<String, Object> properties = new HashMap<>();
+    private Map<String, String> properties = new HashMap<>();
 
     public KafkaForkliftProducer(String topic, KafkaProducer<?, ?> kafkaProducer) {
         this.kafkaProducer = kafkaProducer;
@@ -169,28 +168,18 @@ public class KafkaForkliftProducer implements ForkliftProducerI {
     }
 
     @Override
-    public String send(Map<Header, Object> headers, Map<String, Object> properties, ForkliftMessage message)
+    public String send(Map<String, String> properties, ForkliftMessage message)
                     throws ProducerException {
         throw new UnsupportedOperationException("Kafka Producer does not support headers or properties");
     }
 
     @Override
-    public Map<Header, Object> getHeaders() throws ProducerException {
-        throw new UnsupportedOperationException("Kafka Producer does not support headers");
-    }
-
-    @Override
-    public void setHeaders(Map<Header, Object> headers) throws ProducerException {
-        throw new UnsupportedOperationException("Kafka Producer does not support headers");
-    }
-
-    @Override
-    public Map<String, Object> getProperties() throws ProducerException {
+    public Map<String, String> getProperties() throws ProducerException {
         return this.properties;
     }
 
     @Override
-    public void setProperties(Map<String, Object> properties) throws ProducerException {
+    public void setProperties(Map<String, String> properties) throws ProducerException {
         this.properties = properties;
     }
 

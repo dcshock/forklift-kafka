@@ -48,8 +48,6 @@ public class RetryRunnable implements Runnable {
 
     private ForkliftMessage toForkliftMessage(RetryMessage msg) {
         final ForkliftMessage forkliftMsg = new ForkliftMessage();
-        msg.getHeaders().put(Header.CorrelationId, msg.getMessageId());
-        forkliftMsg.setHeaders(msg.getHeaders());
         forkliftMsg.setMsg(msg.getText());
         forkliftMsg.setProperties(msg.getProperties());
         return forkliftMsg;

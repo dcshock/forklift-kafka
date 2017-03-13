@@ -10,8 +10,7 @@ public class RetryMessage {
     private String topic;
     private ProcessStep step;
     private String text;
-    private Map<forklift.message.Header, Object> headers;
-    private Map<String, Object> properties;
+    private Map<String, String> properties;
     private String persistedPath;
 
     public String getMessageId() {
@@ -54,19 +53,11 @@ public class RetryMessage {
         this.text = text;
     }
 
-    public Map<forklift.message.Header, Object> getHeaders() {
-        return headers;
-    }
-
-    public void setHeaders(Map<forklift.message.Header, Object> headers) {
-        this.headers = headers;
-    }
-
-    public Map<String, Object> getProperties() {
+    public Map<String, String> getProperties() {
         return properties;
     }
 
-    public void setProperties(Map<String, Object> properties) {
+    public void setProperties(Map<String, String> properties) {
         this.properties = properties;
     }
 
@@ -81,6 +72,6 @@ public class RetryMessage {
     @Override
     public String toString() {
         return "RetryMessage [messageId=" + messageId + ", queue=" + queue + ", topic=" + topic + ", step=" + step + ", text=" + text +
-                        ", headers=" + headers + ", properties=" + properties + ", persistedPath=" + persistedPath + "]";
+                        ", properties=" + properties + ", persistedPath=" + persistedPath + "]";
     }
 }

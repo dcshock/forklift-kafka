@@ -11,7 +11,6 @@ import forklift.decorators.BeanResolver;
 import forklift.decorators.LifeCycle;
 import forklift.decorators.Queue;
 import forklift.decorators.Service;
-import forklift.message.Header;
 import forklift.producers.ForkliftProducerI;
 import forklift.producers.ProducerException;
 import org.elasticsearch.common.settings.Settings;
@@ -19,14 +18,11 @@ import org.elasticsearch.node.Node;
 import org.elasticsearch.node.NodeBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-
-import javax.jms.JMSException;
 
 @Service
 public class ReplayES {
@@ -51,12 +47,12 @@ public class ReplayES {
             node = null;
         } else {
             node = NodeBuilder.nodeBuilder()
-                .client(clientOnly)
-                .settings(Settings.settingsBuilder().put("http.enabled", true))
-                .settings(Settings.settingsBuilder().put("http.cors.enabled", true))
-                .settings(Settings.settingsBuilder().put("http.cors.allow-origin", "*"))
-                .settings(Settings.settingsBuilder().put("path.home", "."))
-                .node();
+                              .client(clientOnly)
+                              .settings(Settings.settingsBuilder().put("http.enabled", true))
+                              .settings(Settings.settingsBuilder().put("http.cors.enabled", true))
+                              .settings(Settings.settingsBuilder().put("http.cors.allow-origin", "*"))
+                              .settings(Settings.settingsBuilder().put("path.home", "."))
+                              .node();
             node.start();
 
             try {
@@ -79,7 +75,7 @@ public class ReplayES {
         this.producer = connector.getQueueProducer(ReplayConsumer.class.getAnnotation(Queue.class).value());
 
         this.consumer = new Consumer(ReplayConsumer.class, connector,
-            Thread.currentThread().getContextClassLoader(), ReplayConsumer.class.getAnnotation(Queue.class));
+                                     Thread.currentThread().getContextClassLoader(), ReplayConsumer.class.getAnnotation(Queue.class));
         this.consumer.addServices(new ConsumerService(this));
         this.thread = new ConsumerThread(this.consumer);
         this.thread.setName("ReplayES");
@@ -105,42 +101,42 @@ public class ReplayES {
         this.writer.shutdown();
     }
 
-    @LifeCycle(value=ProcessStep.Pending, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Pending, annotation = Replay.class)
     public void pending(MessageRunnable mr) {
         msg(mr, ProcessStep.Pending);
     }
 
-    @LifeCycle(value=ProcessStep.Validating, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Validating, annotation = Replay.class)
     public void validating(MessageRunnable mr) {
         msg(mr, ProcessStep.Validating);
     }
 
-    @LifeCycle(value=ProcessStep.Invalid, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Invalid, annotation = Replay.class)
     public void invalid(MessageRunnable mr) {
         msg(mr, ProcessStep.Invalid);
     }
 
-    @LifeCycle(value=ProcessStep.Processing, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Processing, annotation = Replay.class)
     public void processing(MessageRunnable mr) {
         msg(mr, ProcessStep.Processing);
     }
 
-    @LifeCycle(value=ProcessStep.Complete, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Complete, annotation = Replay.class)
     public void complete(MessageRunnable mr) {
         msg(mr, ProcessStep.Complete);
     }
 
-    @LifeCycle(value=ProcessStep.Error, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Error, annotation = Replay.class)
     public void error(MessageRunnable mr) {
         msg(mr, ProcessStep.Error);
     }
 
-    @LifeCycle(value=ProcessStep.Retrying, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.Retrying, annotation = Replay.class)
     public void retry(MessageRunnable mr) {
         msg(mr, ProcessStep.Retrying);
     }
 
-    @LifeCycle(value=ProcessStep.MaxRetriesExceeded, annotation=Replay.class)
+    @LifeCycle(value = ProcessStep.MaxRetriesExceeded, annotation = Replay.class)
     public void maxRetries(MessageRunnable mr) {
         msg(mr, ProcessStep.MaxRetriesExceeded);
     }
@@ -149,7 +145,7 @@ public class ReplayES {
         final ForkliftMessage msg = mr.getMsg();
 
         // Read props of the message to see what we need to do with retry counts
-        final Map<String, Object> props = msg.getProperties();
+        final Map<String, String> props = msg.getProperties();
 
         final Map<String, String> fields = new HashMap<>();
         fields.put("text", msg.getMsg());
@@ -162,17 +158,6 @@ public class ReplayES {
             mr.setWarnOnly(true);
         } else {
             fields.put("step", step.toString());
-        }
-
-        // Map in headers
-        for (Header key : msg.getHeaders().keySet()) {
-            // Skip the correlation id because it is already set in the user id field.
-            if (key == Header.CorrelationId)
-                continue;
-
-            final Object val = msg.getHeaders().get(key);
-            if (val != null)
-                fields.put(key.toString(), msg.getHeaders().get(key).toString());
         }
 
         // Map in properties
@@ -197,13 +182,7 @@ public class ReplayES {
             fields.put("topic", mr.getConsumer().getTopic().value());
 
         // Generate the id from the correlation id first followed by the generated amq id.
-        String id = null;
-        try {
-            id = msg.getJmsMsg().getJMSCorrelationID();
-            if (id == null || "".equals(id))
-                id = msg.getJmsMsg().getJMSMessageID();
-        } catch (JMSException ignored) {
-        }
+        String id = msg.getId();
 
         // Push the message to the consumer
         try {

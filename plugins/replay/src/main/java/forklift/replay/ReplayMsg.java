@@ -11,8 +11,7 @@ public class ReplayMsg {
     String topic;
     ProcessStep step;
     String text;
-    Map<forklift.message.Header, Object> headers;
-    Map<String, Object> properties;
+    Map<String, String> properties;
     List<String> errors;
     String time;
 
@@ -36,11 +35,7 @@ public class ReplayMsg {
         return text;
     }
 
-    public Map<forklift.message.Header, Object> getHeaders() {
-        return headers;
-    }
-
-    public Map<String, Object> getProperties() {
+    public Map<String, String> getProperties() {
         return properties;
     }
 

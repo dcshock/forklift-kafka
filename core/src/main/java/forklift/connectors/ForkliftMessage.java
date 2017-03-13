@@ -9,7 +9,6 @@ public class ForkliftMessage {
     private String msg;
     private boolean flagged;
     private String warning;
-    private Map<Header, Object> headers = new HashMap<>();
     private Map<String, String> properties = new HashMap<>();
 
     public ForkliftMessage() {
@@ -49,17 +48,6 @@ public class ForkliftMessage {
 
     public void setFlagged(boolean flagged) {
         this.flagged = flagged;
-    }
-
-    public void setHeaders(Map<Header, Object> headers) {
-        // Get rid of unmodifiable.
-        final Map<Header, Object> newHeaders = new HashMap<>();
-        headers.keySet().stream().forEach(key -> newHeaders.put(key, headers.get(key)));
-        this.headers = newHeaders;
-    }
-
-    public Map<Header, Object> getHeaders() {
-        return headers;
     }
 
     public void setProperties(Map<String, String> properties) {

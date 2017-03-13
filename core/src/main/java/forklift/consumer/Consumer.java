@@ -5,13 +5,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import forklift.classloader.RunAsClassLoader;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.parser.KeyValueParser;
 import forklift.decorators.Config;
-import forklift.decorators.Headers;
 import forklift.decorators.MultiThreaded;
 import forklift.decorators.On;
 import forklift.decorators.OnMessage;
@@ -19,14 +17,11 @@ import forklift.decorators.OnValidate;
 import forklift.decorators.Ons;
 import forklift.decorators.Order;
 import forklift.decorators.Queue;
-import forklift.decorators.Response;
 import forklift.decorators.Topic;
-import forklift.message.Header;
 import forklift.producers.ForkliftProducerI;
 import forklift.properties.PropertiesManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -57,7 +52,6 @@ public class Consumer {
     private final Class<?> msgHandler;
     private final List<Method> onMessage;
     private final List<Method> onValidate;
-    private final List<Method> onResponse;
     private final Map<String, List<MessageRunnable>> orderQueue;
     private final Map<ProcessStep, List<Method>> onProcessStep;
     private String name;
@@ -76,6 +70,7 @@ public class Consumer {
     private java.util.function.Consumer<Consumer> outOfMessages;
 
     private AtomicBoolean running = new AtomicBoolean(false);
+
     public Consumer(Class<?> msgHandler, ForkliftConnectorI connector) {
         this(msgHandler, connector, null);
     }
@@ -133,7 +128,6 @@ public class Consumer {
         // message is received.
         onMessage = new ArrayList<>();
         onValidate = new ArrayList<>();
-        onResponse = new ArrayList<>();
         onProcessStep = new HashMap<>();
         Arrays.stream(ProcessStep.values()).forEach(step -> onProcessStep.put(step, new ArrayList<>()));
         for (Method m : msgHandler.getDeclaredMethods()) {
@@ -141,12 +135,13 @@ public class Consumer {
                 onMessage.add(m);
             else if (m.isAnnotationPresent(OnValidate.class))
                 onValidate.add(m);
-            else if (m.isAnnotationPresent(Response.class))
-                onResponse.add(m);
             else if (m.isAnnotationPresent(Order.class))
                 orderMethod = m;
             else if (m.isAnnotationPresent(On.class) || m.isAnnotationPresent(Ons.class))
-                Arrays.stream(m.getAnnotationsByType(On.class)).map(on -> on.value()).distinct().forEach(x -> onProcessStep.get(x).add(m));
+                Arrays.stream(m.getAnnotationsByType(On.class))
+                      .map(on -> on.value())
+                      .distinct()
+                      .forEach(x -> onProcessStep.get(x).add(m));
         }
 
         if (orderMethod != null)
@@ -158,7 +153,6 @@ public class Consumer {
         injectFields.put(Config.class, new HashMap<>());
         injectFields.put(javax.inject.Inject.class, new HashMap<>());
         injectFields.put(forklift.decorators.Message.class, new HashMap<>());
-        injectFields.put(forklift.decorators.Headers.class, new HashMap<>());
         injectFields.put(forklift.decorators.Properties.class, new HashMap<>());
         injectFields.put(forklift.decorators.Producer.class, new HashMap<>());
         for (Field f : msgHandler.getDeclaredFields()) {
@@ -197,7 +191,7 @@ public class Consumer {
                 log.info("Creating thread pool of {}", multiThreaded.value());
                 blockQueue = new ArrayBlockingQueue<>(multiThreaded.value() * 100 + 100);
                 threadPool = new ThreadPoolExecutor(
-                    multiThreaded.value(), multiThreaded.value(), 5L, TimeUnit.MINUTES, blockQueue);
+                                multiThreaded.value(), multiThreaded.value(), 5L, TimeUnit.MINUTES, blockQueue);
                 threadPool.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
             } else {
                 blockQueue = null;
@@ -232,7 +226,10 @@ public class Consumer {
                         final List<Closeable> closeMe = inject(msg, handler);
 
                         // Create the runner that will ultimately run the handler.
-                        final MessageRunnable runner = new MessageRunnable(this, msg, classLoader, handler, onMessage, onValidate, onResponse, onProcessStep, closeMe);
+                        final MessageRunnable
+                                        runner =
+                                        new MessageRunnable(this, msg, classLoader, handler, onMessage, onValidate,
+                                                            onProcessStep, closeMe);
 
                         // If the message is ordered we need to store messages that cannot currently be processed, and retry them periodically.
                         if (orderQueue != null) {
@@ -326,7 +323,8 @@ public class Consumer {
 
     /**
      * Inject the data from a forklift message into an instance of the msgHandler class.
-     * @param msg containing data
+     *
+     * @param msg      containing data
      * @param instance an instance of the msgHandler class.
      */
     public List<Closeable> inject(ForkliftMessage msg, final Object instance) {
@@ -342,7 +340,7 @@ public class Consumer {
                     log.trace("Inject target> Field: ({})  Decorator: ({})", f, decorator);
                     try {
                         if (decorator == forklift.decorators.Message.class) {
-                            if (clazz ==  ForkliftMessage.class) {
+                            if (clazz == ForkliftMessage.class) {
                                 f.set(instance, msg);
                             } else if (clazz == String.class) {
                                 f.set(instance, msg.getMsg());
@@ -375,14 +373,16 @@ public class Consumer {
                                 }
                                 final Properties config = PropertiesManager.get(confName);
                                 if (config == null) {
-                                    log.warn("Attempt to inject field failed because resource file {} was not found", annotation.value());
+                                    log.warn("Attempt to inject field failed because resource file {} was not found",
+                                             annotation.value());
                                     return;
                                 }
                                 f.set(instance, config);
                             } else {
                                 final Properties config = PropertiesManager.get(annotation.value());
                                 if (config == null) {
-                                    log.warn("Attempt to inject field failed because resource file {} was not found", annotation.value());
+                                    log.warn("Attempt to inject field failed because resource file {} was not found",
+                                             annotation.value());
                                     return;
                                 }
                                 String key = annotation.field();
@@ -392,24 +392,6 @@ public class Consumer {
                                 Object value = config.get(key);
                                 if (value != null) {
                                     f.set(instance, value);
-                                }
-                            }
-                        } else if (decorator == Headers.class) {
-                            final Headers annotation = f.getAnnotation(Headers.class);
-                            final Map<Header, Object> headers = msg.getHeaders();
-                            if (clazz == Map.class) {
-                                f.set(instance, headers);
-                            } else {
-                                final Header key = annotation.value();
-                                if (headers == null) {
-                                    log.warn("Attempt to inject {} from headers, but headers are null", key);
-                                } else if (!key.getHeaderType().equals(f.getType())) {
-                                    log.warn("Injecting field {} failed because it is not type {}", f.getName(), key.getHeaderType());
-                                } else {
-                                    final Object value = headers.get(key);
-                                    if (value != null) {
-                                        f.set(instance, value);
-                                    }
                                 }
                             }
                         } else if (decorator == forklift.decorators.Properties.class) {

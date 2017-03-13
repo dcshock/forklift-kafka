@@ -3,7 +3,6 @@ package forklift.consumer;
 import forklift.classloader.RunAsClassLoader;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
-import forklift.producers.ForkliftProducerI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.Closeable;
@@ -26,14 +25,13 @@ public class MessageRunnable implements Runnable {
     private Object handler;
     private List<Method> onMessage;
     private List<Method> onValidate;
-    private List<Method> onResponse;
     private Map<ProcessStep, List<Method>> onProcessStep;
     private List<String> errors;
     private List<Closeable> closeMe;
     private boolean warnOnly = false;
 
     MessageRunnable(Consumer consumer, ForkliftMessage msg, ClassLoader classLoader, Object handler, List<Method> onMessage,
-                    List<Method> onValidate, List<Method> onResponse, Map<ProcessStep, List<Method>> onProcessStep,
+                    List<Method> onValidate, Map<ProcessStep, List<Method>> onProcessStep,
                     List<Closeable> closeMe) {
         this.consumer = consumer;
         this.msg = msg;
@@ -44,7 +42,6 @@ public class MessageRunnable implements Runnable {
         this.handler = handler;
         this.onMessage = onMessage;
         this.onValidate = onValidate;
-        this.onResponse = onResponse;
         this.onProcessStep = onProcessStep;
         this.errors = new ArrayList<>();
         this.closeMe = closeMe;
@@ -101,51 +98,6 @@ public class MessageRunnable implements Runnable {
                 } else {
                     // { Complete }
                     runHooks(ProcessStep.Complete);
-
-                    // Handle response decoratored methods.
-                    if (msg.getProperties() != null && msg.getProperties().containsKey(RESPONSE)) {
-                        try {
-                            final URI uri = new URI(msg.getProperties().get(RESPONSE).toString());
-
-                            onResponse.stream().forEach((m) -> {
-                                runLoggingErrors(() -> {
-                                    final Object obj = m.invoke(handler);
-
-                                    final ForkliftMessage respMsg = new ForkliftMessage();
-                                    respMsg.setHeaders(msg.getHeaders());
-
-                                    if (m.getReturnType() == String.class)
-                                        respMsg.setMsg(obj.toString());
-                                    else
-                                        respMsg.setMsg(consumer.mapper.writeValueAsString(obj));
-                                    switch (uri.getScheme()) {
-                                    case "queue":
-                                        try (ForkliftProducerI producer = consumer.getConnector().getQueueProducer(uri.getHost())) {
-                                            System.out.println("Sending: " + respMsg.getMsg());
-                                            producer.send(respMsg);
-                                        }
-                                        break;
-                                    case "topic":
-                                        try (ForkliftProducerI producer = consumer.getConnector().getTopicProducer(uri.getHost())) {
-                                            producer.send(respMsg);
-                                        }
-                                        break;
-                                    case "http":
-                                        // Fall through to https
-                                    case "https":
-                                        break;
-                                    default:
-                                        log.warn("Unable to find mapping for response uri scheme {}", uri.getScheme());
-                                        break;
-                                    }
-                                    return null;
-                                });
-                            });
-                        } catch (Exception e) {
-                            log.error("Unable to determine response uri from {}", msg.getProperties().get(RESPONSE), e);
-                        }
-                    }
-
                     LifeCycleMonitors.call(ProcessStep.Complete, this);
                 }
             }

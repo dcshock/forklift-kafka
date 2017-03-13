@@ -10,7 +10,6 @@ import forklift.connectors.ForkliftMessage;
 import forklift.consumer.MessageRunnable;
 import forklift.consumer.ProcessStep;
 import forklift.decorators.LifeCycle;
-import forklift.message.Header;
 import io.searchbox.client.JestClient;
 import io.searchbox.client.JestClientFactory;
 import io.searchbox.client.config.HttpClientConfig;
@@ -132,8 +131,7 @@ public class RetryES {
                                                                  RetryMessage.class);
                                 log.info("Retrying: {}", retryMessage);
                                 executor.schedule(new RetryRunnable(retryMessage, connector, cleanup),
-                                                  Long.parseLong(Integer.toString(
-                                                                  (int)retryMessage.getProperties().get("forklift-retry-timeout"))),
+                                                  Long.parseLong(retryMessage.getProperties().get("forklift-retry-timeout")),
                                                   TimeUnit.SECONDS);
                             } catch (Exception e) {
                                 log.error("Unable to read result {}", msg.source);
@@ -158,23 +156,12 @@ public class RetryES {
         fields.put("text", msg.getMsg());
         fields.put("step", ProcessStep.Error.toString());
 
-        // Map in headers
-        for (Header key : msg.getHeaders().keySet()) {
-            // Skip the correlation id because it is already set in the user id field.
-            if (key == Header.CorrelationId)
-                continue;
-
-            final Object val = msg.getHeaders().get(key);
-            if (val != null)
-                fields.put(key.toString(), msg.getHeaders().get(key).toString());
-        }
-
         /*
          * Properties handling
          */
         {
             // Read props of the message to see what we need to do with retry counts
-            final Map<String, Object> props = msg.getProperties();
+            final Map<String, String> props = msg.getProperties();
 
             // Determine the current retry count. We have to handle string or integer input types
             // since stomp doesn't differentiate the two.
@@ -193,12 +180,12 @@ public class RetryES {
             else
                 retryCount++;
             if (retryCount > retry.maxRetries()) {
-                props.put("forklift-retry-max-retries-exceeded", Boolean.TRUE);
+                props.put("forklift-retry-max-retries-exceeded", Boolean.toString(Boolean.TRUE));
                 return;
             } else {
-                props.put("forklift-retry-max-retries", retry.maxRetries());
-                props.put("forklift-retry-count", retryCount);
-                props.put("forklift-retry-timeout", retry.timeout());
+                props.put("forklift-retry-max-retries", Integer.toString(retry.maxRetries()));
+                props.put("forklift-retry-count", Integer.toString(retryCount));
+                props.put("forklift-retry-timeout", Long.toString(retry.timeout()));
             }
 
             // Map in properties
@@ -254,7 +241,6 @@ public class RetryES {
         final RetryMessage retryMessage = new RetryMessage();
         retryMessage.setMessageId(id);
         retryMessage.setText(msg.getMsg());
-        retryMessage.setHeaders(msg.getHeaders());
         retryMessage.setStep(ProcessStep.Error);
         retryMessage.setProperties(msg.getProperties());
 

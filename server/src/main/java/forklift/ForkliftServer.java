@@ -14,7 +14,6 @@ import forklift.decorators.Topics;
 import forklift.deployment.ClassDeployment;
 import forklift.deployment.Deployment;
 import forklift.stats.StatsCollector;
-import org.apache.activemq.broker.BrokerService;
 import org.apache.http.annotation.ThreadSafe;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -175,13 +174,6 @@ public final class ForkliftServer {
             log.info("Forklift server Stopping");
             classDeployments.getAll().forEach(deploy -> deploymentEvents.onUndeploy(deploy));
             forklift.shutdown();
-
-            if (broker != null) {
-                try {
-                    broker.stop();
-                } catch (Exception ignored) {
-                }
-            }
             state = ServerState.STOPPED;
             log.info("Forklift server Stopped");
 
