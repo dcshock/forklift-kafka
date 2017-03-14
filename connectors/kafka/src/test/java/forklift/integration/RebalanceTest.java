@@ -6,7 +6,6 @@ import com.github.dcshock.avro.schemas.AvroMessage;
 import forklift.Forklift;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftConnectorI;
-import forklift.connectors.ForkliftMessage;
 import forklift.consumer.Consumer;
 import forklift.decorators.MultiThreaded;
 import forklift.decorators.OnMessage;
@@ -15,11 +14,8 @@ import forklift.decorators.Queue;
 import forklift.exception.StartupException;
 import forklift.integration.server.TestServiceManager;
 import forklift.producers.ForkliftProducerI;
-import forklift.producers.ProducerException;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,9 +29,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class IntegrationTest {
+public class RebalanceTest {
 
-    private static final Logger log = LoggerFactory.getLogger(IntegrationTest.class);
+    private static final Logger log = LoggerFactory.getLogger(RebalanceTest.class);
     private static AtomicInteger called = new AtomicInteger(0);
     private static boolean isInjectNull = true;
     TestServiceManager serviceManager;
@@ -53,131 +49,7 @@ public class IntegrationTest {
         called.set(0);
         isInjectNull = true;
     }
-
-    @Test
-    public void testAvroMessage() throws ProducerException, ConnectorException, InterruptedException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
-        int msgCount = 10;
-        ForkliftProducerI
-                        producer =
-                        connector.getQueueProducer("forklift-avro-topic");
-        for (int i = 0; i < msgCount; i++) {
-            AvroMessage avroMessage = new AvroMessage();
-            avroMessage.setName("Avro Message Name");
-            producer.send(avroMessage);
-        }
-        final Consumer c = new Consumer(ForkliftAvroConsumer.class, connector);
-        // Shutdown the consumer after all the messages have been processed.
-        c.setOutOfMessages((listener) -> {
-            listener.shutdown();
-            assertTrue("called was not == " + msgCount, called.get() == msgCount);
-        });
-        // Start the consumer.
-        c.listen();
-        assertTrue(called.get() == msgCount);
-    }
-
-    @Test
-    public void testStringMessage() throws ProducerException, ConnectorException, InterruptedException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
-        int msgCount = 10;
-        ForkliftProducerI
-                        producer =
-                        connector.getQueueProducer("forklift-string-topic");
-        HashMap<String, Object> properties = new HashMap<>();
-        for (int i = 0; i < msgCount; i++) {
-            String msg = new String("sending all the text, producer test");
-            Map<String, Object> props = new HashMap<>();
-            props.put("Foo", "bar");
-            props.put("Eye", "" + i);
-            producer.send(msg);
-        }
-        final Consumer c = new Consumer(StringConsumer.class, connector);
-        // Shutdown the consumer after all the messages have been processed.
-        c.setOutOfMessages((listener) -> {
-            listener.shutdown();
-            assertTrue("called was not == " + msgCount, called.get() == msgCount);
-        });
-        // Start the consumer.
-        c.listen();
-        assertTrue(called.get() == msgCount);
-    }
-
-    @Test
-    public void testMultiThreadedStringMessage() throws ProducerException, ConnectorException, InterruptedException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
-        int msgCount = 100;
-        ForkliftProducerI
-                        producer =
-                        connector.getQueueProducer("forklift-string-topic");
-        for (int i = 0; i < msgCount; i++) {
-            String msg = new String("sending all the text, producer test");
-            producer.send(msg);
-        }
-        final Consumer
-                        c =
-                        new Consumer(MultiThreadedStringConsumer.class,
-                                     connector);
-        // Shutdown the consumer after all the messages have been processed.
-        c.setOutOfMessages((listener) -> {
-            listener.shutdown();
-            assertTrue("called was not == " + msgCount, called.get() == msgCount);
-        });
-        // Start the consumer.
-        c.listen();
-        assertTrue(called.get() == msgCount);
-    }
-
-    @Test
-    public void testSendMapValueMessage() throws ConnectorException, ProducerException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
-        int msgCount = 10;
-        ForkliftProducerI
-                        producer =
-                        connector.getQueueProducer("forklift-map-topic");
-        for (int i = 0; i < msgCount; i++) {
-            final Map<String, String> m = new HashMap<>();
-            m.put("x", "producer key value send test");
-            producer.send(m);
-        }
-
-        final Consumer c = new Consumer(ForkliftMapConsumer.class, connector);
-        // Shutdown the consumer after all the messages have been processed.
-        c.setOutOfMessages((listener) -> {
-            listener.shutdown();
-            assertTrue("called was not == " + msgCount, called.get() == msgCount);
-        });
-
-        // Start the consumer.
-        c.listen();
-
-        assertTrue(called.get() == msgCount);
-    }
-
-    @Test
-    public void testSendObjectMessage() throws ConnectorException, ProducerException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
-        int msgCount = 10;
-        ForkliftProducerI
-                        producer =
-                        connector.getQueueProducer("forklift-object-topic");
-        for (int i = 0; i < msgCount; i++) {
-            final TestMessage m = new TestMessage(new String("x=producer object send test"), i);
-            producer.send(m);
-        }
-
-        final Consumer c = new Consumer(ForkliftObjectConsumer.class, connector);
-        // Shutdown the consumer after all the messages have been processed.
-        c.setOutOfMessages((listener) -> {
-            listener.shutdown();
-            assertTrue("called was not == " + msgCount, called.get() == msgCount);
-        });
-
-        // Start the consumer.
-        c.listen();
-
-        assertTrue(called.get() == msgCount);
-    }
+    
 
     /**
      * Tests that all messages are processes when new consumers are brought up and then brought down.  Consumers are taken down in
@@ -189,22 +61,26 @@ public class IntegrationTest {
     @Test
     public void testRebalancing() throws StartupException, InterruptedException, ConnectorException {
 
-        ExecutorService executor = Executors.newFixedThreadPool(12);
+        ExecutorService executor = Executors.newFixedThreadPool(18);
 
         //3 Forklift instances
         Forklift forklift1 = serviceManager.newManagedForkliftInstance();
         Forklift forklift2 = serviceManager.newManagedForkliftInstance();
         Forklift forklift3 = serviceManager.newManagedForkliftInstance();
+        Forklift forklift4 = serviceManager.newManagedForkliftInstance();
+        Forklift forklift5 = serviceManager.newManagedForkliftInstance();
 
         //3 Connector instances
         ForkliftConnectorI connector1 = forklift1.getConnector();
         ForkliftConnectorI connector2 = forklift2.getConnector();
         ForkliftConnectorI connector3 = forklift3.getConnector();
+        ForkliftConnectorI connector4 = forklift4.getConnector();
+        ForkliftConnectorI connector5 = forklift5.getConnector();
 
         //3 producers, these all come from one connector as we do not want to take producers down.
-        ForkliftProducerI producer1 = connector3.getQueueProducer("forklift-string-topic");
-        ForkliftProducerI producer2 = connector3.getQueueProducer("forklift-map-topic");
-        ForkliftProducerI producer3 = connector3.getQueueProducer("forklift-object-topic");
+        ForkliftProducerI producer1 = connector5.getQueueProducer("forklift-string-topic");
+        ForkliftProducerI producer2 = connector5.getQueueProducer("forklift-map-topic");
+        ForkliftProducerI producer3 = connector5.getQueueProducer("forklift-object-topic");
 
         List<Consumer>
                         connector1Consumers =
@@ -215,7 +91,12 @@ public class IntegrationTest {
         List<Consumer>
                         connector3Consumers =
                         setupConsumers(connector3, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-
+        List<Consumer>
+                        connector4Consumers =
+                        setupConsumers(connector4, StringConsumer.class);
+        List<Consumer>
+                        connector5Consumers =
+                        setupConsumers(connector5, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
         AtomicBoolean running = new AtomicBoolean(true);
         Random random = new Random();
         AtomicInteger messagesSent = new AtomicInteger(0);
@@ -258,12 +139,12 @@ public class IntegrationTest {
         Thread.sleep(500);
         //Start consumers
         connector1Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-        Thread.sleep(2500);
         connector2Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-        Thread.sleep(2500);
         connector3Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-
-        Thread.sleep(5000);
+        Thread.sleep(1000);
+        connector4Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
+        Thread.sleep(3000);
+        connector5Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
         log.info("STOPPING CONSUMER 1");
         connector1Consumers.forEach(consumer -> consumer.shutdown());
         forklift1.shutdown();
@@ -272,15 +153,22 @@ public class IntegrationTest {
         log.info("STOPPING CONSUMER 2");
         connector2Consumers.forEach(consumer -> consumer.shutdown());
         forklift2.shutdown();
+        log.info("STOPPING CONSUMER 3");
+        connector3Consumers.forEach(consumer -> consumer.shutdown());
+        forklift3.shutdown();
+        Thread.sleep(5000);
+        log.info("STOPPING CONSUMER 4");
+        connector4Consumers.forEach(consumer -> consumer.shutdown());
+        forklift4.shutdown();
         Thread.sleep(5000);
         //stop producing
         running.set(false);
         //wait to finish any processing
         Thread.sleep(5000);
         //stop another consumer
-        log.info("STOPPING CONSUMER 3");
-        connector3Consumers.forEach(consumer -> consumer.shutdown());
-        forklift3.shutdown();
+        log.info("STOPPING CONSUMER 5");
+        connector5Consumers.forEach(consumer -> consumer.shutdown());
+        forklift5.shutdown();
         assertEquals(messagesSent.get(), called.get());
         assertTrue(messagesSent.get() > 0);
 

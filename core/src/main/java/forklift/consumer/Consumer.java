@@ -259,6 +259,7 @@ public class Consumer {
     }
 
     public void shutdown() {
+        log.info("Consumer shutting down");
         running.set(false);
     }
 

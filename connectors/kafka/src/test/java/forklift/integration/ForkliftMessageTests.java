@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by afrieze on 3/13/17.
  */
-public class ProduceForkliftMessageTests {
+public class ForkliftMessageTests {
 
-    private static final Logger log = LoggerFactory.getLogger(ProduceForkliftMessageTests.class);
+    private static final Logger log = LoggerFactory.getLogger(ForkliftMessageTests.class);
     private static AtomicInteger called = new AtomicInteger(0);
     private static boolean isInjectNull = true;
     TestServiceManager serviceManager;
