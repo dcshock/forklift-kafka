@@ -5,10 +5,10 @@ import java.util.Map;
 
 public class ForkliftMessage {
     private String id;
-    private String msg;
-    private boolean flagged;
-    private String warning;
-    private Map<String, String> properties = new HashMap<>();
+    protected String msg;
+    protected boolean flagged;
+    protected String warning;
+    protected Map<String, String> properties = new HashMap<>();
 
     public ForkliftMessage() {
     }

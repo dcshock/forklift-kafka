@@ -2,7 +2,6 @@ package forklift.activemq.test;
 
 import forklift.Forklift;
 import forklift.connectors.ActiveMQConnector;
-
 import org.apache.activemq.broker.BrokerService;
 import org.apache.commons.io.FileUtils;
 
@@ -10,8 +9,8 @@ import org.apache.commons.io.FileUtils;
  * Contains all of the necessary connection management code that tests
  * need in order to run against the activemq broker and forklift. This
  * manager assumes that only a single broker is needed for testing.
- * @author mconroy
  *
+ * @author mconroy
  */
 public class TestServiceManager {
     private static final Object lock = new Object();
