@@ -201,7 +201,7 @@ public class OnDecoratorTest {
         Map<ProcessStep, List<Method>> onProcessStep = (Map<ProcessStep, List<Method>>)fetch(consumer, "onProcessStep");
         final MessageRunnable
                         mr =
-                        new MessageRunnable(consumer, msg, consumer.getClass().getClassLoader(), c, onMessage, onValidate, null,
+                        new MessageRunnable(consumer, msg, consumer.getClass().getClassLoader(), c, onMessage, onValidate,
                                             onProcessStep, Collections.emptyList());
         mr.run();
     }

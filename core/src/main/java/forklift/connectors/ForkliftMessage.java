@@ -1,6 +1,5 @@
 package forklift.connectors;
 
-import forklift.message.Header;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +21,7 @@ public class ForkliftMessage {
         return true;
     }
 
-    public String getId(){
+    public String getId() {
         return null;
     }
 

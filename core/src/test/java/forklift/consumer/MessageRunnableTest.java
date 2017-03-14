@@ -42,7 +42,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, null, tc, onMessage, onValidate, null, createOnProcessStepMap(),
+                        new MessageRunnable(null, message, null, tc, onMessage, onValidate, createOnProcessStepMap(),
                                             Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer1.success.get());
@@ -99,7 +99,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, null, tc, onMessage, onValidate, null, createOnProcessStepMap(),
+                        new MessageRunnable(null, message, null, tc, onMessage, onValidate, createOnProcessStepMap(),
                                             Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer2.success.get());
@@ -161,7 +161,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer3.success.get());
@@ -222,7 +222,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer4.success.get());
@@ -289,7 +289,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer5.success.get());
@@ -354,7 +354,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer6.success.get());
@@ -416,7 +416,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer7.success.get());
@@ -480,7 +480,7 @@ public class MessageRunnableTest {
 
         MessageRunnable
                         mr =
-                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate, null,
+                        new MessageRunnable(null, message, tc.getClass().getClassLoader(), tc, onMessage, onValidate,
                                             createOnProcessStepMap(), Collections.emptyList());
         mr.run();
         assertTrue(TestConsumer8.success.get());

@@ -7,12 +7,10 @@ import static org.junit.Assert.assertTrue;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
 import forklift.consumer.Consumer;
-import forklift.decorators.Headers;
 import forklift.decorators.Message;
 import forklift.decorators.Properties;
 import forklift.decorators.Queue;
 import forklift.decorators.Topic;
-import forklift.message.Header;
 import org.junit.Test;
 import java.util.HashMap;
 import java.util.Map;
@@ -101,10 +99,7 @@ public class ConsumerTest {
         assertEquals(2, ec.msg.ideas.length);
         assertEquals("Fred Jones", ec.msg.name);
         assertEquals("http://forklift", ec.msg.url);
-        assertNull(ec.headers);
         assertNull(ec.properties);
-        assertNull(ec.cid);
-        assertEquals(ec.producer, "replace");
         assertEquals("default", ec.strval);
     }
 
@@ -116,13 +111,6 @@ public class ConsumerTest {
         ForkliftMessage msg = new ForkliftMessage();
         msg.setMsg("{}");
 
-        Map<Header, Object> headers = new HashMap<>();
-        headers.put(Header.DeliveryCount, "3");
-        headers.put(Header.Producer, "testing");
-        headers.put(Header.Priority, "1");
-        headers.put(Header.CorrelationId, "abcd");
-        msg.setHeaders(headers);
-
         Map<String, String> properties = new HashMap<>();
         properties.put("my-cool-prop", "3");
         properties.put("mystrval", "blah");
@@ -131,12 +119,9 @@ public class ConsumerTest {
         msg.setProperties(properties);
 
         test.inject(msg, ec);
-        assertEquals(4, ec.headers.size());
         assertEquals(4, ec.properties.size());
         assertEquals("blah", ec.mystrval);
         assertEquals("blah", ec.strval);
-        assertEquals(ec.cid, "abcd");
-        assertEquals(ec.producer, "testing");
     }
 
     // Class doesn't have queue or topic should throw IllegalArgException
@@ -173,14 +158,7 @@ public class ConsumerTest {
 
     @Queue("a")
     public class ExampleJsonConsumer {
-        @Headers
-        Map<Headers, String> headers;
-
-        @Headers
-        String cid;
-
-        @Headers(Header.Producer)
-        String producer = "replace";
+        ;
 
         @Properties
         Map<String, Object> properties;

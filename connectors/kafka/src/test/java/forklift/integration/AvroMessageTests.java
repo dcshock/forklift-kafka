@@ -2,14 +2,12 @@ package forklift.integration;
 
 import static org.junit.Assert.assertTrue;
 import com.github.dcshock.avro.schemas.Address;
-import com.github.dcshock.avro.schemas.AvroMessage;
 import com.github.dcshock.avro.schemas.ComplexAvroMessage;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftConnectorI;
 import forklift.consumer.Consumer;
 import forklift.decorators.OnMessage;
 import forklift.decorators.Producer;
-import forklift.decorators.Properties;
 import forklift.decorators.Queue;
 import forklift.exception.StartupException;
 import forklift.integration.server.TestServiceManager;
@@ -56,7 +54,7 @@ public class AvroMessageTests {
         ForkliftProducerI
                         producer =
                         connector.getQueueProducer("forklift-avro-topic");
-        Map<String, Object> producerProps = new HashMap<>();
+        Map<String, String> producerProps = new HashMap<>();
         producerProps.put("Eye", "producerProperty");
         producer.setProperties(producerProps);
         for (int i = 0; i < msgCount; i++) {

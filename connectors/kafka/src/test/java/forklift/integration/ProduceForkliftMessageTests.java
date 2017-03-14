@@ -57,8 +57,8 @@ public class ProduceForkliftMessageTests {
         ForkliftProducerI
                         producer =
                         connector.getQueueProducer("forklift-string-topic");
-        HashMap<String, Object> properties = new HashMap<>();
-        Map<String, Object> producerProps = new HashMap<>();
+        HashMap<String, String> properties = new HashMap<>();
+        Map<String, String> producerProps = new HashMap<>();
         producerProps.put("Eye", "overwriteme");
         producer.setProperties(producerProps);
         for (int i = 0; i < msgCount; i++) {

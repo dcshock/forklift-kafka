@@ -44,7 +44,7 @@ public class LifeCycleMonitorsTest {
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
-                    LifeCycleMonitors.call(ps, new MessageRunnable(null, message, null, null, null, null, null, null,
+                    LifeCycleMonitors.call(ps, new MessageRunnable(null, message, null, null, null, null, null,
                                                                    Collections.emptyList()));
                 }
                 threads.getAndDecrement();
@@ -109,7 +109,7 @@ public class LifeCycleMonitorsTest {
         // Now the validate listener should log out an error but should stop processing from happening.
         ForkliftMessage message = new TestMsg("1");
         LifeCycleMonitors.call(ProcessStep.Validating,
-                               new MessageRunnable(null, message, null, null, null, null, null, null, Collections.emptyList()));
+                               new MessageRunnable(null, message, null, null, null, null, null, Collections.emptyList()));
         assertTrue("Make sure the exception was eaten and just logged.", true);
     }
 }
