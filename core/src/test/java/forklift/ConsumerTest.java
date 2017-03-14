@@ -99,7 +99,7 @@ public class ConsumerTest {
         assertEquals(2, ec.msg.ideas.length);
         assertEquals("Fred Jones", ec.msg.name);
         assertEquals("http://forklift", ec.msg.url);
-        assertNull(ec.properties);
+        assertEquals(0, ec.properties.size());
         assertEquals("default", ec.strval);
     }
 
