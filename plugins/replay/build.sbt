@@ -2,7 +2,7 @@ organization := "com.github.dcshock"
 
 name := "forklift-replay"
 
-version := "0.14"
+version := "0.15"
 
 javacOptions ++= Seq("-source", "1.8")
 

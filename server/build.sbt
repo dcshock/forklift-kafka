@@ -17,7 +17,7 @@ initialize := {
 libraryDependencies ++= Seq(
   "com.github.dcshock"  % "forklift"            % "0.24",
   "com.github.dcshock"  % "forklift-kafka"      % "0.1",
-  "com.github.dcshock"  % "forklift-stats"      % "0.1",
+  "com.github.dcshock"  % "forklift-stats"      % "0.2",
   "com.github.dcshock"  % "consul-rest-client"  % "0.10",
   "io.searchbox"        % "jest"                % "2.0.0",
   "org.apache.geronimo.specs" % "geronimo-jms_1.1_spec" % "1.1.1",

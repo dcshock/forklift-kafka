@@ -2,7 +2,6 @@ package forklift.retry;
 
 import forklift.connectors.ForkliftConnectorI;
 import forklift.connectors.ForkliftMessage;
-import forklift.message.Header;
 import forklift.producers.ForkliftProducerI;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
