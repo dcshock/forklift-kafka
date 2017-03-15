@@ -49,7 +49,7 @@ public class RebalanceTest {
         called.set(0);
         isInjectNull = true;
     }
-    
+
 
     /**
      * Tests that all messages are processes when new consumers are brought up and then brought down.  Consumers are taken down in

@@ -127,7 +127,6 @@ public class KafkaController {
      */
     public void stop(long timeout, TimeUnit timeUnit) throws InterruptedException {
         running = false;
-        kafkaConsumer.wakeup();
         executor.shutdownNow();
         executor.awaitTermination(timeout, timeUnit);
     }
