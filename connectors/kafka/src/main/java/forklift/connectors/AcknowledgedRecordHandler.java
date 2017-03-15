@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class AcknowledgedRecordHandler {
     private static final Logger log = LoggerFactory.getLogger(AcknowledgedRecordHandler.class);
-    private Map<TopicPartition, OffsetAndMetadata> pendingOffsets = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<TopicPartition, OffsetAndMetadata> pendingOffsets = new ConcurrentHashMap<>();
     private Object pausedLock = new Object();
     private Object unpausedLock = new Object();
     private AtomicInteger acknowledgeEntryCount = new AtomicInteger(0);
@@ -31,7 +31,7 @@ public class AcknowledgedRecordHandler {
      * blocking method and a short delay may occur should the available topic paritions be changing.
      *
      * @param record the record to acknowledge
-     * @return true if the record has been achnowledged and may be processed, else false
+     * @return true if the record has been acknowledged and may be processed, else false
      * @throws InterruptedException if interrupted
      */
     public boolean acknowledgeRecord(ConsumerRecord<?, ?> record) throws InterruptedException {
@@ -42,17 +42,13 @@ public class AcknowledgedRecordHandler {
             }
             acknowledgeEntryCount.incrementAndGet();
         }
-        if (!assignment.contains(new TopicPartition(record.topic(), record.partition()))) {
+        TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
+        if (!assignment.contains(topicPartition)) {
             acknowledged = false;
         } else {
-            long offset = record.offset() + 1;
-            TopicPartition topicPartition = new TopicPartition(record.topic(), record.partition());
-            synchronized(this) {
-                if (!pendingOffsets.containsKey(topicPartition) || pendingOffsets.get(topicPartition).offset() < offset) {
-                    OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(offset, "Commit From Forklift Server");
-                    pendingOffsets.put(topicPartition, offsetAndMetadata);
-                }
-            }
+            long commitOffset = record.offset() + 1;
+            OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(commitOffset, "Commit From Forklift Server");
+            pendingOffsets.merge(topicPartition, offsetAndMetadata, this::greaterOffset);
             acknowledged = true;
         }
 
@@ -63,6 +59,15 @@ public class AcknowledgedRecordHandler {
             }
         }
         return acknowledged;
+    }
+
+    private OffsetAndMetadata greaterOffset(OffsetAndMetadata a, OffsetAndMetadata b){
+        if(a == null){
+            return b;
+        } else if(b == null){
+            return a;
+        }
+        return a.offset() > b.offset()?a:b;
     }
 
     /**
@@ -137,7 +142,7 @@ public class AcknowledgedRecordHandler {
     }
 
     private void unpauseAcknowledgements() {
-        synchronized (unpausedLock){
+        synchronized (unpausedLock) {
             acknowledgementsPaused = false;
             unpausedLock.notifyAll();
         }
