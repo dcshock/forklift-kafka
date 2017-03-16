@@ -33,6 +33,7 @@ public class RebalanceTest {
 
     private static final Logger log = LoggerFactory.getLogger(RebalanceTest.class);
     private static AtomicInteger called = new AtomicInteger(0);
+    private static AtomicInteger messagesSent = new AtomicInteger(0);
     private static boolean isInjectNull = true;
     TestServiceManager serviceManager;
 
@@ -47,9 +48,131 @@ public class RebalanceTest {
         serviceManager = new TestServiceManager();
         serviceManager.start();
         called.set(0);
+        messagesSent.set(0);
         isInjectNull = true;
     }
 
+
+
+
+    private class ForkliftServer{
+
+        private ExecutorService executor;
+        private Class[] consumerClasses;
+        private Forklift forklift;
+        private List<Consumer> consumers = new ArrayList<Consumer>();
+        private String name;
+        private volatile boolean running = false;
+
+        public ForkliftServer(String name, ExecutorService executor, Class<?>... consumerClasses){
+            this.name = name;
+            this.executor = executor;
+            this.consumerClasses = consumerClasses;
+            try {
+                this.forklift = serviceManager.newManagedForkliftInstance();
+            } catch (StartupException e) {
+               log.error("Error constructing forklift server");
+            }
+        }
+
+        public ForkliftProducerI getProducer(String topicName){
+            return forklift.getConnector().getTopicProducer(topicName);
+        }
+
+        public void startConsumers(){
+            log.info("Starting Consumers for server: " + name);
+            for (Class<?> c : consumerClasses) {
+                Consumer consumer = new Consumer(c, forklift.getConnector());
+                consumers.add(consumer);
+                executor.submit(() -> consumer.listen());
+            }
+        }
+
+        public void startProducers(){
+
+            ForkliftProducerI producer1 = getProducer("forklift-string-topic");
+            ForkliftProducerI producer2 = getProducer("forklift-map-topic");
+            ForkliftProducerI producer3 = getProducer("forklift-object-topic");
+            Random random = new Random();
+            running = true;
+            executor.execute(() -> {
+                while (running) {
+                    long jitter = random.nextLong() % 50;
+                    try {
+                        producer1.send("String message");
+                        messagesSent.incrementAndGet();
+                        Thread.currentThread().sleep(jitter);
+                    } catch (Exception e) {
+                    }
+                }
+            });
+            executor.execute(() -> {
+                while (running) {
+                    long jitter = random.nextLong() % 50;
+                    try {
+                        final Map<String, String> m = new HashMap<>();
+                        m.put("x", "producer key value send test");
+                        producer2.send(m);
+                        messagesSent.incrementAndGet();
+                        Thread.currentThread().sleep(jitter);
+                    } catch (Exception e) {
+                    }
+                }
+            });
+            executor.execute(() -> {
+                while (running) {
+                    long jitter = random.nextLong() % 50;
+                    try {
+                        final TestMessage m = new TestMessage(new String("x=producer object send test"), 1);
+                        producer3.send(m);
+                        messagesSent.incrementAndGet();
+                        Thread.currentThread().sleep(jitter);
+                    } catch (Exception e) {
+                    }
+                }
+            });
+        }
+
+        public void stopProducers(){
+            running = false;
+        }
+
+        public void shutdown(){
+            stopProducers();
+            log.info("Stopping Consumers for server: " + name);
+            consumers.forEach(consumer -> consumer.shutdown());
+            forklift.shutdown();
+        }
+    }
+
+    @Test
+    public void rebalanceRun1() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun2() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun3() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun4() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun5() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun6() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
+    @Test
+    public void rebalanceRun7() throws StartupException, InterruptedException, ConnectorException {
+        testRebalancing();
+    }
 
     /**
      * Tests that all messages are processes when new consumers are brought up and then brought down.  Consumers are taken down in
@@ -58,120 +181,43 @@ public class RebalanceTest {
      * @throws InterruptedException
      * @throws ConnectorException
      */
-    @Test
-    public void testRebalancing() throws StartupException, InterruptedException, ConnectorException {
+    private void testRebalancing() throws StartupException, InterruptedException, ConnectorException {
 
         ExecutorService executor = Executors.newFixedThreadPool(18);
 
-        //3 Forklift instances
-        Forklift forklift1 = serviceManager.newManagedForkliftInstance();
-        Forklift forklift2 = serviceManager.newManagedForkliftInstance();
-        Forklift forklift3 = serviceManager.newManagedForkliftInstance();
-        Forklift forklift4 = serviceManager.newManagedForkliftInstance();
-        Forklift forklift5 = serviceManager.newManagedForkliftInstance();
+        ForkliftServer server1 = new ForkliftServer("Server1", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server2 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server3 = new ForkliftServer("Server3", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server4 = new ForkliftServer("Server4", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server5 = new ForkliftServer("Server5", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
 
-        //3 Connector instances
-        ForkliftConnectorI connector1 = forklift1.getConnector();
-        ForkliftConnectorI connector2 = forklift2.getConnector();
-        ForkliftConnectorI connector3 = forklift3.getConnector();
-        ForkliftConnectorI connector4 = forklift4.getConnector();
-        ForkliftConnectorI connector5 = forklift5.getConnector();
-
-        //3 producers, these all come from one connector as we do not want to take producers down.
-        ForkliftProducerI producer1 = connector5.getQueueProducer("forklift-string-topic");
-        ForkliftProducerI producer2 = connector5.getQueueProducer("forklift-map-topic");
-        ForkliftProducerI producer3 = connector5.getQueueProducer("forklift-object-topic");
-
-        List<Consumer>
-                        connector1Consumers =
-                        setupConsumers(connector1, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        List<Consumer>
-                        connector2Consumers =
-                        setupConsumers(connector2, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        List<Consumer>
-                        connector3Consumers =
-                        setupConsumers(connector3, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        List<Consumer>
-                        connector4Consumers =
-                        setupConsumers(connector4, StringConsumer.class);
-        List<Consumer>
-                        connector5Consumers =
-                        setupConsumers(connector5, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        AtomicBoolean running = new AtomicBoolean(true);
-        Random random = new Random();
-        AtomicInteger messagesSent = new AtomicInteger(0);
-        executor.execute(() -> {
-            while (running.get()) {
-                long jitter = random.nextLong() % 50;
-                try {
-                    producer1.send("String message");
-                    messagesSent.incrementAndGet();
-                    Thread.currentThread().sleep(jitter);
-                } catch (Exception e) {
-                }
-            }
-        });
-        executor.execute(() -> {
-            while (running.get()) {
-                long jitter = random.nextLong() % 50;
-                try {
-                    final Map<String, String> m = new HashMap<>();
-                    m.put("x", "producer key value send test");
-                    producer2.send(m);
-                    messagesSent.incrementAndGet();
-                    Thread.currentThread().sleep(jitter);
-                } catch (Exception e) {
-                }
-            }
-        });
-        executor.execute(() -> {
-            while (running.get()) {
-                long jitter = random.nextLong() % 50;
-                try {
-                    final TestMessage m = new TestMessage(new String("x=producer object send test"), 1);
-                    producer3.send(m);
-                    messagesSent.incrementAndGet();
-                    Thread.currentThread().sleep(jitter);
-                } catch (Exception e) {
-                }
-            }
-        });
+        server5.startProducers();
         Thread.sleep(500);
-        //Start consumers
-        connector1Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-        connector2Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-        connector3Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
+        server1.startConsumers();
+        server2.startConsumers();
+        server3.startConsumers();
         Thread.sleep(1000);
-        connector4Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
+        server4.startConsumers();
         Thread.sleep(3000);
-        connector5Consumers.forEach(consumer -> executor.submit(() -> consumer.listen()));
-        log.info("STOPPING CONSUMER 1");
-        connector1Consumers.forEach(consumer -> consumer.shutdown());
-        forklift1.shutdown();
+        server5.startConsumers();
+        server1.shutdown();
         Thread.sleep(5000);
-        //stop a consumer
-        log.info("STOPPING CONSUMER 2");
-        connector2Consumers.forEach(consumer -> consumer.shutdown());
-        forklift2.shutdown();
-        log.info("STOPPING CONSUMER 3");
-        connector3Consumers.forEach(consumer -> consumer.shutdown());
-        forklift3.shutdown();
+        server2.shutdown();
+        server3.shutdown();
         Thread.sleep(5000);
-        log.info("STOPPING CONSUMER 4");
-        connector4Consumers.forEach(consumer -> consumer.shutdown());
-        forklift4.shutdown();
+        server4.shutdown();
         Thread.sleep(5000);
         //stop producing
-        running.set(false);
+        server5.stopProducers();
         //wait to finish any processing
-        Thread.sleep(5000);
+        for(int i = 0; i < 15 && called.get() != messagesSent.get(); i++){
+            log.info("Waiting: " + i);
+            Thread.sleep(1000);
+        }
         //stop another consumer
-        log.info("STOPPING CONSUMER 5");
-        connector5Consumers.forEach(consumer -> consumer.shutdown());
-        forklift5.shutdown();
+        server5.shutdown();
         assertEquals(messagesSent.get(), called.get());
         assertTrue(messagesSent.get() > 0);
-
     }
 
     private List<Consumer> setupConsumers(ForkliftConnectorI connector, Class<?>... consumersClasses) {
@@ -198,7 +244,6 @@ public class RebalanceTest {
                 return;
             }
             int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + value);
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
@@ -218,7 +263,6 @@ public class RebalanceTest {
                 return;
             }
             int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + value.getName());
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
@@ -239,7 +283,6 @@ public class RebalanceTest {
                 return;
             }
             int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + value);
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
@@ -259,7 +302,6 @@ public class RebalanceTest {
                 return;
             }
             int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + mapMessage);
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
@@ -280,7 +322,6 @@ public class RebalanceTest {
                 return;
             }
             int i = called.getAndIncrement();
-            System.out.println(Thread.currentThread().getName() + testMessage.getText());
             isInjectNull = injectedProducer != null ? false : true;
         }
     }
