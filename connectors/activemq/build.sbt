@@ -1,6 +1,6 @@
 organization := "com.github.dcshock"
 
-name := "forklift-activemq"
+name := "forklift-k-activemq"
 
 version := "0.12"
 
@@ -16,7 +16,7 @@ initialize := {
 }
 
 libraryDependencies ++= Seq(
-    "com.github.dcshock" % "forklift" % "0.24",
+    "com.github.dcshock" % "forklift-k" % "0.24",
     "org.apache.activemq" % "activemq-client" % "5.14.0",
     "org.apache.activemq" % "activemq-broker" % "5.14.0",
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.3",

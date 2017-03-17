@@ -1,6 +1,6 @@
 organization := "com.github.dcshock"
 
-name := "forklift-replay"
+name := "forklift-k-replay"
 
 version := "0.15"
 
@@ -13,7 +13,7 @@ initialize := {
 }
 
 libraryDependencies ++= Seq(
-  "com.github.dcshock" % "forklift" % "0.24",
+  "com.github.dcshock" % "forklift-k" % "0.24",
   "org.elasticsearch" % "elasticsearch" % "2.4.1",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.3",
   "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.3",

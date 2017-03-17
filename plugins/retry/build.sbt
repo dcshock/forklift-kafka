@@ -1,6 +1,6 @@
 organization := "com.github.dcshock"
 
-name := "forklift-retry"
+name := "forklift-k-retry"
 
 version := "0.13"
 
@@ -13,7 +13,7 @@ initialize := {
 }
 
 libraryDependencies ++= Seq(
-  "com.github.dcshock" % "forklift" % "0.24",
+  "com.github.dcshock" % "forklift-k" % "0.24",
   "com.fasterxml.jackson.core" % "jackson-databind" % "2.7.3",
   "com.fasterxml.jackson.datatype" % "jackson-datatype-jsr310" % "2.7.3",
   "io.searchbox" % "jest" % "2.0.0"

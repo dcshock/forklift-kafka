@@ -1,6 +1,6 @@
 organization := "com.github.dcshock"
 
-name := "forklift"
+name := "forklift-k"
 
 version := "0.24"
 

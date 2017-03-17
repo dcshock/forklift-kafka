@@ -1,6 +1,6 @@
 organization := "com.github.dcshock"
 
-name := "forklift-notify"
+name := "forklift-k-notify"
 
 version := "0.4"
 
@@ -13,7 +13,7 @@ initialize := {
 }
 
 libraryDependencies ++= Seq(
-  "com.github.dcshock" % "forklift" % "0.24"
+  "com.github.dcshock" % "forklift-k" % "0.24"
 )
 
 resolvers ++= Seq(
