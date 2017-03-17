@@ -127,7 +127,12 @@ public class AcknowledgedRecordHandler {
             }
             assignment.removeAll(removedPartitions);
             return removedOffsets;
-        } finally {
+        }
+        catch(Exception e){
+            log.info("Error in removeParitions", e);
+            throw e;
+        }
+        finally {
             unpauseAcknowledgements();
         }
     }

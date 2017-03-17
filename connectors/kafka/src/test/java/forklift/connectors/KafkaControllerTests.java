@@ -46,7 +46,7 @@ public class KafkaControllerTests {
     @Before
     public void setup() {
         MockitoAnnotations.initMocks(this);
-        this.controller = new KafkaController(kafkaConsumer, messageStream);
+        this.controller = new KafkaController(kafkaConsumer, messageStream, "");
     }
 
     @After

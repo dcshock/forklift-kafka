@@ -49,7 +49,7 @@ public class AvroMessageTests {
 
     @Test
     public void testAvroMessage() throws ProducerException, ConnectorException, InterruptedException, StartupException {
-        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance().getConnector();
+        ForkliftConnectorI connector = serviceManager.newManagedForkliftInstance("").getConnector();
         int msgCount = 10;
         ForkliftProducerI
                         producer =

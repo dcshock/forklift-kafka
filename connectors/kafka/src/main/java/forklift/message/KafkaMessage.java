@@ -8,8 +8,6 @@ import forklift.connectors.KafkaController;
 import forklift.consumer.parser.KeyValueParser;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import java.util.HashMap;
-import java.util.Map;
 
 public class KafkaMessage extends ForkliftMessage {
     private final KafkaController controller;
@@ -46,7 +44,7 @@ public class KafkaMessage extends ForkliftMessage {
         if (consumerRecord.value() instanceof GenericRecord) {
             GenericRecord genericRecord = (GenericRecord)consumerRecord.value();
             Object properties = genericRecord.get("forkliftProperties");
-            if(properties != null){
+            if (properties != null) {
                 this.setProperties(KeyValueParser.parse(properties.toString()));
             }
             Object value = genericRecord.get("forkliftMapMsg");

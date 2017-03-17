@@ -69,7 +69,7 @@ public class RebalanceTest {
             this.executor = executor;
             this.consumerClasses = consumerClasses;
             try {
-                this.forklift = serviceManager.newManagedForkliftInstance();
+                this.forklift = serviceManager.newManagedForkliftInstance(name);
             } catch (StartupException e) {
                log.error("Error constructing forklift server");
             }
@@ -144,35 +144,7 @@ public class RebalanceTest {
             forklift.shutdown();
         }
     }
-
-    @Test
-    public void rebalanceRun1() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun2() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun3() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun4() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun5() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun6() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
-    @Test
-    public void rebalanceRun7() throws StartupException, InterruptedException, ConnectorException {
-        testRebalancing();
-    }
+    
 
     /**
      * Tests that all messages are processes when new consumers are brought up and then brought down.  Consumers are taken down in
@@ -216,6 +188,95 @@ public class RebalanceTest {
         }
         //stop another consumer
         server5.shutdown();
+        assertEquals(messagesSent.get(), called.get());
+        assertTrue(messagesSent.get() > 0);
+    }
+
+    @Test
+    private void testRebalanceUnderLoad() throws InterruptedException {
+        ExecutorService executor = Executors.newFixedThreadPool(35);
+        ForkliftServer server1 = new ForkliftServer("Server1", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server2 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server3 = new ForkliftServer("Server3", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server4 = new ForkliftServer("Server4", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server5 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        server4.startProducers();
+        server5.startProducers();
+        Thread.sleep(2000);
+        server1.startConsumers();
+        server2.startConsumers();
+        Thread.sleep(10000);
+        server1.shutdown();
+        Thread.sleep(5000);
+        server3.startConsumers();
+        Thread.sleep(5000);
+        server3.shutdown();
+
+
+        server4.stopProducers();
+        server5.stopProducers();
+        log.info("Messages sent: " + messagesSent.get());
+        //wait to finish any processing
+        for(int i = 0; i < 60 && called.get() != messagesSent.get(); i++){
+            log.info("Waiting: " + i);
+            Thread.sleep(1000);
+        }
+        assertEquals(messagesSent.get(), called.get());
+        assertTrue(messagesSent.get() > 0);
+
+    }
+
+    @Test
+    private void testMultipleConcurrentRebalancing() throws StartupException, InterruptedException, ConnectorException {
+
+        ExecutorService executor = Executors.newFixedThreadPool(35);
+
+        ForkliftServer server1 = new ForkliftServer("Server1", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server2 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server3 = new ForkliftServer("Server3", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server4 = new ForkliftServer("Server4", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server5 = new ForkliftServer("Server5", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server6 = new ForkliftServer("Server6", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server7 = new ForkliftServer("Server7", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server8 = new ForkliftServer("Server8", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server9 = new ForkliftServer("Server9", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server10 = new ForkliftServer("Server10", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+
+        server10.startProducers();
+        Thread.sleep(500);
+        server1.startConsumers();
+        server2.startConsumers();
+        server3.startConsumers();
+        server4.startConsumers();
+        server5.startConsumers();
+        server6.startConsumers();
+        server7.startConsumers();
+        server8.startConsumers();
+        server9.startConsumers();
+        server10.startConsumers();
+        Thread.sleep(5000);
+
+        server1.shutdown();
+        server2.shutdown();
+        server3.shutdown();
+        Thread.sleep(5000);
+        server4.shutdown();
+        server5.shutdown();
+        server6.shutdown();
+        Thread.sleep(5000);
+        server7.shutdown();
+        server8.shutdown();
+        server9.shutdown();
+
+
+        server10.stopProducers();
+        //wait to finish any processing
+        for(int i = 0; i < 60 && called.get() != messagesSent.get(); i++){
+            log.info("Waiting: " + i);
+            Thread.sleep(1000);
+        }
+        log.info("Messages sent: " + messagesSent.get());
+        server10.shutdown();
         assertEquals(messagesSent.get(), called.get());
         assertTrue(messagesSent.get() > 0);
     }
