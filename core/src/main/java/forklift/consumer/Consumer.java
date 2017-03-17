@@ -206,37 +206,45 @@ public class Consumer {
 
             while (running.get()) {
                 ForkliftMessage msg;
-                while ((msg = consumer.receive(2500)) != null && running.get()) {
-                    try {
-                        final Object handler = msgHandler.newInstance();
+                try {
+                    while ((msg = consumer.receive(2500)) != null && running.get()) {
+                        try {
+                            final Object handler = msgHandler.newInstance();
 
-                        // Inject dependencies into the consumer handler.
-                        final List<Closeable> closeMe = inject(msg, handler);
+                            // Inject dependencies into the consumer handler.
+                            final List<Closeable> closeMe = inject(msg, handler);
 
-                        // Create the runner that will ultimately run the handler.
-                        final MessageRunnable
-                                        runner =
-                                        new MessageRunnable(this, msg, classLoader, handler, onMessage, onValidate,
-                                                            onProcessStep, closeMe);
+                            // Create the runner that will ultimately run the handler.
+                            final MessageRunnable
+                                            runner =
+                                            new MessageRunnable(this, msg, classLoader, handler, onMessage, onValidate,
+                                                                onProcessStep, closeMe);
 
-                        // Execute the message.
-                        if (threadPool != null)
-                            threadPool.execute(runner);
-                        else
-                            runner.run();
-                    } catch (Exception e) {
-                        // If this error occurs we had a massive problem with the conusmer class setup.
-                        log.error("Consumer couldn't be used.", e);
+                            // Execute the message.
+                            if (threadPool != null)
+                                threadPool.execute(runner);
+                            else
+                                runner.run();
+                        } catch (Exception e) {
+                            // If this error occurs we had a massive problem with the conusmer class setup.
+                            log.error("Consumer couldn't be used.", e);
 
-                        // In this instance just stop the consumer. Someone needs to fix their shit!
-                        running.set(false);
+                            // In this instance just stop the consumer. Someone needs to fix their shit!
+                            running.set(false);
+                        }
+                    }
+
+                    if (outOfMessages != null)
+                        outOfMessages.accept(this);
+
+                } catch (ConnectorException e) {
+                    if (!running.get()) {
+                        log.info("Exception most likely while shutting down, allow process to shutdown gracefully", e);
+                    } else {
+                        throw e;
                     }
                 }
-
-                if (outOfMessages != null)
-                    outOfMessages.accept(this);
             }
-
             // Shutdown the pool, but let actively executing work finish.
             if (threadPool != null) {
                 log.info("Shutting down thread pool - active {}", threadPool.getActiveCount());

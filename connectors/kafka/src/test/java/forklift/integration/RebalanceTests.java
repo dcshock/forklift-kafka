@@ -169,8 +169,7 @@ public class RebalanceTests {
         Thread.sleep(5000);
         server3.startConsumers();
         Thread.sleep(5000);
-        server3.shutdown();
-
+        server2.shutdown();
 
         server4.stopProducers();
         server5.stopProducers();
@@ -182,6 +181,7 @@ public class RebalanceTests {
             log.info("Waiting: " + i);
             Thread.sleep(1000);
         }
+        server3.shutdown();
         assertEquals(messagesSent.get(), called.get());
         assertTrue(messagesSent.get() > 0);
 
