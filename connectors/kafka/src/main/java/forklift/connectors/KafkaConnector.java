@@ -2,6 +2,8 @@ package forklift.connectors;
 
 import forklift.consumer.ForkliftConsumerI;
 import forklift.consumer.KafkaTopicConsumer;
+import forklift.controller.KafkaController;
+import forklift.message.MessageStream;
 import forklift.producers.ForkliftProducerI;
 import forklift.producers.KafkaForkliftProducer;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -21,17 +23,21 @@ public class KafkaConnector implements ForkliftConnectorI {
     private final String kafkaHosts;
     private final String schemaRegistries;
     private final String groupId;
-    private KafkaConsumer<?, ?> kafkaConsumer;
     private KafkaProducer<?, ?> kafkaProducer;
     private MessageStream messageStream = new MessageStream();
     private KafkaController controller;
-    private final String controllerName;
 
-    public KafkaConnector(String kafkaHosts, String schemaRegistries, String groupId, String controllerName) {
+    /**
+     * Constructs a nw instance of the KafkaConnector
+     *
+     * @param kafkaHosts list of kafka servers in host:port,... format
+     * @param schemaRegistries list of schema registry servers in http://host:port,... format
+     * @param groupId the groupId to use when subscribing to topics
+     */
+    public KafkaConnector(String kafkaHosts, String schemaRegistries, String groupId) {
         this.kafkaHosts = kafkaHosts;
         this.schemaRegistries = schemaRegistries;
         this.groupId = groupId;
-        this.controllerName = controllerName;
     }
 
     @Override
@@ -59,18 +65,15 @@ public class KafkaConnector implements ForkliftConnectorI {
         props.put("bootstrap.servers", kafkaHosts);
         props.put("group.id", groupId);
         props.put("enable.auto.commit", false);
-        //props.put("consumer.timeout.ms", "-1");
         props.put("key.deserializer", io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
         props.put("value.deserializer", io.confluent.kafka.serializers.KafkaAvroDeserializer.class);
         props.put("schema.registry.url", schemaRegistries);
         props.put("specific.avro.reader", false);
         props.put("auto.offset.reset", "earliest");
         props.put("max.poll.records", "200");
-        //props.put("heartbeat.interval.ms", "6000");
-        //props.put("session.timeout.ms", "18000");
-        //props.put("rebalance.max.retries", "10");
-        this.kafkaConsumer = new KafkaConsumer(props);
-        this.controller = new KafkaController(kafkaConsumer, messageStream, controllerName);
+        KafkaConsumer<?, ?> kafkaConsumer;
+        kafkaConsumer = new KafkaConsumer(props);
+        this.controller = new KafkaController(kafkaConsumer, messageStream);
         return controller;
     }
 
@@ -101,7 +104,7 @@ public class KafkaConnector implements ForkliftConnectorI {
                 this.controller.start();
             }
         }
-        return new KafkaTopicConsumer(name, controller, messageStream);
+        return new KafkaTopicConsumer(name, controller);
     }
 
     @Override
@@ -118,5 +121,4 @@ public class KafkaConnector implements ForkliftConnectorI {
         }
         return new KafkaForkliftProducer(name, this.kafkaProducer);
     }
-
 }

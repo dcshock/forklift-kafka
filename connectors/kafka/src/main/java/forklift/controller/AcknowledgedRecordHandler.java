@@ -1,4 +1,4 @@
-package forklift.connectors;
+package forklift.controller;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -18,10 +18,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class AcknowledgedRecordHandler {
     private static final Logger log = LoggerFactory.getLogger(AcknowledgedRecordHandler.class);
+    private final Object pausedLock = new Object();
+    private final Object unpausedLock = new Object();
+    private final AtomicInteger acknowledgeEntryCount = new AtomicInteger(0);
     private ConcurrentHashMap<TopicPartition, OffsetAndMetadata> pendingOffsets = new ConcurrentHashMap<>();
-    private Object pausedLock = new Object();
-    private Object unpausedLock = new Object();
-    private AtomicInteger acknowledgeEntryCount = new AtomicInteger(0);
     private volatile boolean acknowledgementsPaused = false;
     private Set<TopicPartition> assignment = ConcurrentHashMap.newKeySet();
 
@@ -35,7 +35,7 @@ public class AcknowledgedRecordHandler {
      * @throws InterruptedException if interrupted
      */
     public boolean acknowledgeRecord(ConsumerRecord<?, ?> record) throws InterruptedException {
-        boolean acknowledged = false;
+        boolean acknowledged;
         synchronized (unpausedLock) {
             while (acknowledgementsPaused) {
                 unpausedLock.wait();
@@ -51,7 +51,6 @@ public class AcknowledgedRecordHandler {
             pendingOffsets.merge(topicPartition, offsetAndMetadata, this::greaterOffset);
             acknowledged = true;
         }
-
         synchronized (pausedLock) {
             int count = acknowledgeEntryCount.decrementAndGet();
             if (acknowledgementsPaused && count == 0) {
@@ -61,13 +60,13 @@ public class AcknowledgedRecordHandler {
         return acknowledged;
     }
 
-    private OffsetAndMetadata greaterOffset(OffsetAndMetadata a, OffsetAndMetadata b){
-        if(a == null){
+    private OffsetAndMetadata greaterOffset(OffsetAndMetadata a, OffsetAndMetadata b) {
+        if (a == null) {
             return b;
-        } else if(b == null){
+        } else if (b == null) {
             return a;
         }
-        return a.offset() > b.offset()?a:b;
+        return a.offset() > b.offset() ? a : b;
     }
 
     /**
@@ -84,12 +83,6 @@ public class AcknowledgedRecordHandler {
             Map<TopicPartition, OffsetAndMetadata> flushed = pendingOffsets;
             pendingOffsets = new ConcurrentHashMap<>();
             return flushed;
-        } catch (InterruptedException interrupt) {
-            Thread.currentThread().interrupt();
-            throw interrupt;
-        } catch (Throwable e) {
-            log.error("Error flushing Acknowledged", e);
-            throw e;
         } finally {
             this.unpauseAcknowledgements();
         }
@@ -106,8 +99,8 @@ public class AcknowledgedRecordHandler {
     }
 
     /**
-     * Remove partitions from management.  Any existing offsets for the removed partitions are returned.  Note that the offest is the highest
-     * acknowleged message's offset + 1 per kafka's specification of how to commit offsets.  Note that this
+     * Remove partitions from management.  Any existing offsets for the removed partitions are returned.  Note that the offset is the highest
+     * acknowledged message's offset + 1 per kafka's specification of how to commit offsets.  Note that this
      * is a blocking method as any threads which are currently acknowledging records are allowed to complete and any
      * incoming threads are paused.
      *
@@ -127,12 +120,10 @@ public class AcknowledgedRecordHandler {
             }
             assignment.removeAll(removedPartitions);
             return removedOffsets;
-        }
-        catch(Exception e){
-            log.info("Error in removeParitions", e);
+        } catch (Exception e) {
+            log.info("Error in removePartitions", e);
             throw e;
-        }
-        finally {
+        } finally {
             unpauseAcknowledgements();
         }
     }
@@ -152,5 +143,4 @@ public class AcknowledgedRecordHandler {
             unpausedLock.notifyAll();
         }
     }
-
 }

@@ -2,32 +2,32 @@ package forklift.consumer;
 
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
-import forklift.connectors.KafkaController;
-import forklift.connectors.MessageStream;
+import forklift.controller.KafkaController;
+import forklift.message.ReadableMessageStream;
 
 /**
- * Retrieves messages from a kafka topic and adds consumer's topic to the {@link forklift.connectors.KafkaController}.
+ * Retrieves messages from a {@link forklift.controller.KafkaController}
  */
 public class KafkaTopicConsumer implements ForkliftConsumerI {
     private final String topic;
     private final KafkaController controller;
-    private final MessageStream messageStream;
+    private final ReadableMessageStream messageStream;
     private volatile boolean topicAdded = false;
 
-    public KafkaTopicConsumer(String topic, KafkaController controller, MessageStream messageStream) {
+    public KafkaTopicConsumer(String topic, KafkaController controller) {
         this.topic = topic;
         this.controller = controller;
-        this.messageStream = messageStream;
+        this.messageStream = controller.getMessageStream();
     }
 
     /**
      * {@inheritDoc}
      * <p>
-     * Retrieves the {@link forklift.connectors.MessageStream#nextRecord(String, long) nextRecord} from the messageStream.
+     * Retrieves the {@link forklift.message.MessageStream#nextRecord(String, long) nextRecord} from the messageStream.
      * If no record is available within the specified timeout, null is returned.
      * <p>
      * <strong>Note:</strong> Because we do not wish to poll for kafka topics until we are actively receiving messages, this method is
-     * also responsible for calling {@link forklift.connectors.KafkaController#addTopic(String) addTopic} on the kafkaController.
+     * also responsible for calling {@link forklift.controller.KafkaController#addTopic(String) addTopic} on the kafkaController.
      *
      * @param timeout the time in milliseconds to wait for a record to become available
      * @return a message if one is available, else null
@@ -35,23 +35,26 @@ public class KafkaTopicConsumer implements ForkliftConsumerI {
      */
     @Override
     public ForkliftMessage receive(long timeout) throws ConnectorException {
+        addTopicIfMissing();
+        //ensure that the controller is still running
+        if (!controller.isRunning()) {
+            throw new ConnectorException("Connection to Kafka Controller lost");
+        }
         try {
-            if (!topicAdded) {
-                synchronized (this) {
-                    if (!topicAdded) {
-                        controller.addTopic(topic);
-                        topicAdded = true;
-                    }
-                }
-
-            }
-            //ensure that our controller is still running
-            if (!controller.isRunning()) {
-                throw new ConnectorException("Connection to Kafka Controller lost");
-            }
-            return messageStream.nextRecord(this.topic, timeout);
+            return this.messageStream.nextRecord(this.topic, timeout);
         } catch (InterruptedException e) {
             throw new ConnectorException("Kafka message receive interrupted");
+        }
+    }
+
+    private void addTopicIfMissing() {
+        if (!topicAdded) {
+            synchronized (this) {
+                if (!topicAdded) {
+                    controller.addTopic(topic);
+                    topicAdded = true;
+                }
+            }
         }
     }
 

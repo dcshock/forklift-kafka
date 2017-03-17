@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ObjectMessageTests {
 
-    private static final Logger log = LoggerFactory.getLogger(RebalanceTest.class);
+    private static final Logger log = LoggerFactory.getLogger(RebalanceTests.class);
     private static AtomicInteger called = new AtomicInteger(0);
     private static boolean isInjectNull = true;
     TestServiceManager serviceManager;

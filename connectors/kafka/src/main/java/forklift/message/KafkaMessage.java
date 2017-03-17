@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
-import forklift.connectors.KafkaController;
+import forklift.controller.KafkaController;
 import forklift.consumer.parser.KeyValueParser;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

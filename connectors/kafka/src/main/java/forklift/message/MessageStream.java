@@ -1,6 +1,5 @@
-package forklift.connectors;
+package forklift.message;
 
-import forklift.message.KafkaMessage;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A stream of available messages which can be retrieved by topic.
  */
-public class MessageStream {
+public class MessageStream implements ReadableMessageStream {
     private static final Logger log = LoggerFactory.getLogger(MessageStream.class);
     Map<String, BlockingQueue<KafkaMessage>> topicQueue = new ConcurrentHashMap<>();
 
@@ -59,15 +58,7 @@ public class MessageStream {
         this.topicQueue.remove(topic);
     }
 
-    /**
-     * Blocking method to retrieve the next available record for a topic.  Messages are retreived
-     * in FIFO order within their topic.
-     *
-     * @param topic   the topic the retrieved message should belong to
-     * @param timeout how long to wait for a message in milliseconds
-     * @return a message if one is available, else null
-     * @throws InterruptedException if interrupted
-     */
+    @Override
     public KafkaMessage nextRecord(String topic, long timeout) throws InterruptedException {
         KafkaMessage message = null;
         BlockingQueue<KafkaMessage> queue = topicQueue.get(topic);

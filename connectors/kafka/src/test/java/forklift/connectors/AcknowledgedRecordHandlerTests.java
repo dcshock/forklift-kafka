@@ -1,7 +1,7 @@
 package forklift.connectors;
 
 import static org.junit.Assert.assertEquals;
-import com.sun.scenario.effect.Offset;
+import forklift.controller.AcknowledgedRecordHandler;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;

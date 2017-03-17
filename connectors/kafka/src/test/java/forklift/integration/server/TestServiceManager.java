@@ -113,7 +113,7 @@ public class TestServiceManager {
         // Verify that we can get a kafka connection to the broker.
         String kafkaUri = "127.0.0.1:" + kafkaPort;
         String schemaUrl = "http://127.0.0.1:" + schemaPort;
-        connector = new KafkaConnector(kafkaUri, schemaUrl, "testGroup", controllerName);
+        connector = new KafkaConnector(kafkaUri, schemaUrl, "testGroup");
         Forklift forklift = new Forklift();
         forklift.start(connector);
         forklifts.add(forklift);

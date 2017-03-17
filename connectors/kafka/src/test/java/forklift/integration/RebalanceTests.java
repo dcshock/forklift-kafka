@@ -26,12 +26,11 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class RebalanceTest {
+public class RebalanceTests {
 
-    private static final Logger log = LoggerFactory.getLogger(RebalanceTest.class);
+    private static final Logger log = LoggerFactory.getLogger(RebalanceTests.class);
     private static AtomicInteger called = new AtomicInteger(0);
     private static AtomicInteger messagesSent = new AtomicInteger(0);
     private static boolean isInjectNull = true;
@@ -146,62 +145,22 @@ public class RebalanceTest {
     }
     
 
-    /**
-     * Tests that all messages are processes when new consumers are brought up and then brought down.  Consumers are taken down in
-     * the same order they are brought up in order to ensure rebalance occurs.
-     * @throws StartupException
-     * @throws InterruptedException
-     * @throws ConnectorException
-     */
-    private void testRebalancing() throws StartupException, InterruptedException, ConnectorException {
-
-        ExecutorService executor = Executors.newFixedThreadPool(18);
-
-        ForkliftServer server1 = new ForkliftServer("Server1", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        ForkliftServer server2 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        ForkliftServer server3 = new ForkliftServer("Server3", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        ForkliftServer server4 = new ForkliftServer("Server4", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        ForkliftServer server5 = new ForkliftServer("Server5", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-
-        server5.startProducers();
-        Thread.sleep(500);
-        server1.startConsumers();
-        server2.startConsumers();
-        server3.startConsumers();
-        Thread.sleep(1000);
-        server4.startConsumers();
-        Thread.sleep(3000);
-        server5.startConsumers();
-        server1.shutdown();
-        Thread.sleep(5000);
-        server2.shutdown();
-        server3.shutdown();
-        Thread.sleep(5000);
-        server4.shutdown();
-        Thread.sleep(5000);
-        //stop producing
-        server5.stopProducers();
-        //wait to finish any processing
-        for(int i = 0; i < 15 && called.get() != messagesSent.get(); i++){
-            log.info("Waiting: " + i);
-            Thread.sleep(1000);
-        }
-        //stop another consumer
-        server5.shutdown();
-        assertEquals(messagesSent.get(), called.get());
-        assertTrue(messagesSent.get() > 0);
-    }
 
     @Test
-    private void testRebalanceUnderLoad() throws InterruptedException {
+    public void testRebalanceUnderLoad() throws InterruptedException {
         ExecutorService executor = Executors.newFixedThreadPool(35);
         ForkliftServer server1 = new ForkliftServer("Server1", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
         ForkliftServer server2 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
         ForkliftServer server3 = new ForkliftServer("Server3", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
         ForkliftServer server4 = new ForkliftServer("Server4", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
-        ForkliftServer server5 = new ForkliftServer("Server2", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server5 = new ForkliftServer("Server5", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server6 = new ForkliftServer("Server6", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+        ForkliftServer server7 = new ForkliftServer("Server7", executor, StringConsumer.class, ForkliftMapConsumer.class, ForkliftObjectConsumer.class);
+
         server4.startProducers();
         server5.startProducers();
+        server6.startProducers();
+        server7.startProducers();
         Thread.sleep(2000);
         server1.startConsumers();
         server2.startConsumers();
@@ -215,6 +174,8 @@ public class RebalanceTest {
 
         server4.stopProducers();
         server5.stopProducers();
+        server6.stopProducers();
+        server7.stopProducers();
         log.info("Messages sent: " + messagesSent.get());
         //wait to finish any processing
         for(int i = 0; i < 60 && called.get() != messagesSent.get(); i++){
@@ -227,7 +188,7 @@ public class RebalanceTest {
     }
 
     @Test
-    private void testMultipleConcurrentRebalancing() throws StartupException, InterruptedException, ConnectorException {
+    public void testMultipleConcurrentRebalancing() throws StartupException, InterruptedException, ConnectorException {
 
         ExecutorService executor = Executors.newFixedThreadPool(35);
 

@@ -6,8 +6,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import forklift.connectors.ConnectorException;
 import forklift.connectors.ForkliftMessage;
-import forklift.connectors.KafkaController;
-import forklift.connectors.MessageStream;
+import forklift.controller.KafkaController;
+import forklift.message.MessageStream;
 import forklift.message.KafkaMessage;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,7 +25,8 @@ public class KafkaTopicConsumerTests {
         this.controller = mock(KafkaController.class);
         when(controller.isRunning()).thenReturn(true);
         this.messageStream = mock(MessageStream.class);
-        consumer = new KafkaTopicConsumer(topic, controller, messageStream);
+        when(controller.getMessageStream()).thenReturn(this.messageStream);
+        consumer = new KafkaTopicConsumer(topic, controller);
     }
 
     @Test

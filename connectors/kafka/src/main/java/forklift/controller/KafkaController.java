@@ -1,6 +1,8 @@
-package forklift.connectors;
+package forklift.controller;
 
 import forklift.message.KafkaMessage;
+import forklift.message.MessageStream;
+import forklift.message.ReadableMessageStream;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -22,12 +24,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * Manages the {@link org.apache.kafka.clients.consumer.KafkaConsumer} thread.  Polled records are sent to the MessageStream. Commits
- * are batched and performed on any {@link #acknowledge(org.apache.kafka.clients.consumer.ConsumerRecord) acknowledged records}.  Best
- * performance is usually achieved using one controller instance for all topic subscriptions.
+ * are batched and performed on any {@link #acknowledge(org.apache.kafka.clients.consumer.ConsumerRecord) acknowledged records}.
  * <p>
  * <strong>WARNING: </strong>Kafka does not lend itself well to message level commits.  For this reason, the controller sends commits
  * as a batch once every poll cycle.  It should be noted that it is possible for a message to be
@@ -42,16 +42,22 @@ public class KafkaController {
     private final KafkaConsumer<?, ?> kafkaConsumer;
     private final MessageStream messageStream;
     private volatile boolean topicsChanged = false;
-    private Object topicsMonitor = new Object();
     private AcknowledgedRecordHandler acknowlegmentHandler = new AcknowledgedRecordHandler();
-    private String controllerName;
     private Map<TopicPartition, OffsetAndMetadata> failedOffset = null;
     private Map<TopicPartition, AtomicInteger> flowControl = new ConcurrentHashMap<>();
 
-    public KafkaController(KafkaConsumer<?, ?> kafkaConsumer, MessageStream messageStream, String controllerName) {
+    public KafkaController(KafkaConsumer<?, ?> kafkaConsumer, MessageStream messageStream) {
         this.kafkaConsumer = kafkaConsumer;
         this.messageStream = messageStream;
-        this.controllerName = controllerName;
+    }
+
+    /**
+     * Returns a {@link forklift.message.ReadableMessageStream} which is fed by messages polled by this controller.
+     *
+     * @return a {@link forklift.message.ReadableMessageStream}
+     */
+    public ReadableMessageStream getMessageStream() {
+        return this.messageStream;
     }
 
     /**
@@ -66,16 +72,14 @@ public class KafkaController {
             messageStream.addTopic(topic);
             topics.add(topic);
             topicsChanged = true;
-            synchronized (topicsMonitor) {
-                topicsMonitor.notify();
-            }
+            this.notifyAll();
             return true;
         }
         return false;
     }
 
     /**
-     * Unsubscribes the underlying {@link org.apache.kafka.clients.consumer.KafkaConsumer} from the passed in topic and removes the
+     * Unsubscribe the underlying {@link org.apache.kafka.clients.consumer.KafkaConsumer} from the passed in topic and removes the
      * topic from the message stream.
      *
      * @param topic the topic to remove
@@ -106,11 +110,11 @@ public class KafkaController {
      *
      * @param record the record to acknowledge
      * @return true if the record should be processed, else false
-     * @throws InterruptedException
+     * @throws InterruptedException if the thread is interrupted
      */
     public boolean acknowledge(ConsumerRecord<?, ?> record) throws InterruptedException {
         AtomicInteger flowCount = flowControl.get(new TopicPartition(record.topic(), record.partition()));
-        if(flowCount != null){
+        if (flowCount != null) {
             flowCount.decrementAndGet();
         }
         log.debug("Acknowledge message with topic {} partition {} offset {}", record.topic(), record.partition(), record.offset());
@@ -125,7 +129,7 @@ public class KafkaController {
      */
     public void start() {
         running = true;
-        executor.submit(() -> controlLoop());
+        executor.submit(this::controlLoop);
     }
 
     /**
@@ -133,7 +137,7 @@ public class KafkaController {
      *
      * @param timeout  the time to wait for the service to stop
      * @param timeUnit the TimeUnit of timeout
-     * @throws InterruptedException
+     * @throws InterruptedException if the thread is interrupted
      */
     public void stop(long timeout, TimeUnit timeUnit) throws InterruptedException {
         executor.shutdownNow();
@@ -147,99 +151,29 @@ public class KafkaController {
             while (running) {
                 boolean updatedAssignment = false;
                 if (topics.size() == 0) {
-                    //check if the last remaining topic was removed
-                    if (kafkaConsumer.assignment().size() > 0) {
-                        Map<TopicPartition, OffsetAndMetadata>
-                                        offsetData =
-                                        this.acknowlegmentHandler.removePartitions(kafkaConsumer.assignment());
-                        failedOffset = offsetData;
-                        if (offsetData.size() > 0) {
-                            log.info(controllerName + "topics changed CommitSync before unsubscribe " + offsetData.size());
-                        }
-                        kafkaConsumer.commitSync(offsetData);
-                        failedOffset = null;
-                        kafkaConsumer.unsubscribe();
-                    }
-                    synchronized (topicsMonitor) {
-                        //recheck wait condition inside synchronized block
-                        while (topics.size() == 0) {
-                            //pause the polling thread until a topic comes in
-                            log.debug("Control-Loop waiting for topic");
-                            topicsMonitor.wait();
-                        }
-                    }
+                    commitPendingAndWaitForTopics();
                 }
                 if (topicsChanged) {
-                    Set<TopicPartition> removed = new HashSet<>();
-                    synchronized (this) {
-                        for (TopicPartition partition : kafkaConsumer.assignment()) {
-                            if (!topics.contains(partition.topic())) {
-                                removed.add(partition);
-                            }
-                        }
-                        topicsChanged = false;
-                    }
-                    //commit any removed partitions before we unsubscribe them
-                    Map<TopicPartition, OffsetAndMetadata> offsetData = this.acknowlegmentHandler.removePartitions(removed);
-                    failedOffset = offsetData;
-                    if (offsetData.size() > 0) {
-                        log.info(controllerName + " topics changed committing offset: " + offsetData.size());
-                    }
-                    kafkaConsumer.commitSync(offsetData);
-                    failedOffset = null;
+                    commitAnyPendingOffsetsForRemovedTopics();
                     kafkaConsumer.subscribe(topics, new RebalanceListener());
                     updatedAssignment = true;
                 }
-
-                log.debug("Control-Loop polling");
-
-                //pause partitions that haven't processed yet
-                Set<TopicPartition> paused = new HashSet<>();
-                Set<TopicPartition> unpaused = new HashSet<>();
-                for (Map.Entry<TopicPartition, AtomicInteger> entry : flowControl.entrySet()) {
-                    if (entry.getValue().get() > 0) {
-                        paused.add(entry.getKey());
-                    } else {
-                        unpaused.add(entry.getKey());
-                    }
-                }
-                kafkaConsumer.pause(paused);
-                kafkaConsumer.resume(unpaused);
+                flowControl();
                 ConsumerRecords<?, ?> records = kafkaConsumer.poll(1000);
+                //Must be done before we send records to the acknowledgmentHandler
                 if (updatedAssignment) {
-                    this.acknowlegmentHandler.addPartitions(kafkaConsumer.assignment());
-                    for (TopicPartition partition : kafkaConsumer.assignment()) {
-                        this.flowControl.merge(partition, new AtomicInteger(),
-                                               (oldValue, newValue) -> oldValue == null ? newValue : oldValue);
-                    }
+                    updateAssignment();
                 }
-                if (records.count() > 0) {
-                    log.info(controllerName + "Control-Loop adding: " + records.count() + " to record stream");
-                    records.forEach(record -> flowControl.get(new TopicPartition(record.topic(), record.partition()))
-                                                         .incrementAndGet());
-                    messageStream.addRecords(consumerRecordsToKafkaMessages(records));
-                }
+                addRecordsToStream(records);
                 Map<TopicPartition, OffsetAndMetadata> offsetData = this.acknowlegmentHandler.flushAcknowledged();
-                if (offsetData.size() > 0) {
-                    String offsetDescription =
-                                    offsetData.entrySet()
-                                              .stream()
-                                              .map(entry -> "topic: " + entry.getKey().topic() + ", " +
-                                                            "partition: " + entry.getKey().partition() + ", " +
-                                                            "offset: " + entry.getValue().offset())
-                                              .collect(Collectors.joining("|"));
-                    log.debug("Control-Loop Commiting offsets {}", offsetDescription);
-                    failedOffset = offsetData;
-                    kafkaConsumer.commitSync(offsetData);
-                    failedOffset = null;
-                }
+                commitOffsets(offsetData);
             }
         } catch (WakeupException e) {
-            log.info(controllerName + "Wakeup, Control-Loop exiting");
+            log.info("Wakeup, controlLoop exiting");
         } catch (InterruptedException e) {
-            log.info(controllerName + "Interrupted, Control-Loop exiting");
+            log.info("Interrupted, controlLoop exiting");
         } catch (Throwable t) {
-            log.error(controllerName + "Control-Loop error, exiting", t);
+            log.error("controlLoop error, exiting", t);
             throw t;
         } finally {
             running = false;
@@ -249,7 +183,7 @@ public class KafkaController {
                                 this.acknowlegmentHandler.removePartitions(kafkaConsumer.assignment());
                 try {
                     if (failedOffset != null) {
-                        log.info(controllerName + "failedOffset of size: " + failedOffset.size());
+                        log.debug("failedOffset of size: " + failedOffset.size());
                         for (TopicPartition partition : failedOffset.keySet()) {
                             offsetData.merge(partition, failedOffset.get(partition), (oldO, newO) -> {
                                 if (oldO == null) {
@@ -263,23 +197,101 @@ public class KafkaController {
                         }
                     }
 
-                    log.info(controllerName + "Closing offset size committed: " + offsetData.size());
+                    log.info("closing offset size committed: " + offsetData.size());
                     try {
-                        //if we got here through running = false or interrupt instead of wakeup, in this case wakeup hasn't been reset
+                        //if we got here through running = false or interrupt instead of a wakeup, we need
+                        //to retry our commit as the first attempt will throw a WakeupException
                         kafkaConsumer.commitSync(offsetData);
                     } catch (WakeupException wakeup) {
-                        log.error("Wakeup on closing commitSync, retrying");
+                        log.error("controlLoop wakeup on closing commitSync, retrying");
                         kafkaConsumer.commitSync(offsetData);
                     }
                 } catch (Throwable e) {
-                    log.error(controllerName + " error commiting sync", e);
+                    log.error("controlLoop error commiting sync", e);
                 }
             } catch (InterruptedException e) {
-                log.info("Control-Loop failed to commit offsets on shutdown", e);
+                log.info("controlLoop failed to commit offsets on shutdown", e);
             }
             //the kafkaConsumer must be closed in the poll thread
-            log.info(controllerName + "Control-Loop closing kafkaConsumer");
+            log.info("controlLoop closing kafkaConsumer");
             kafkaConsumer.close();
+        }
+    }
+
+    private void commitPendingAndWaitForTopics() throws InterruptedException {
+        //check if the last remaining topic was removed
+        if (kafkaConsumer.assignment().size() > 0) {
+            Map<TopicPartition, OffsetAndMetadata>
+                            offsetData =
+                            this.acknowlegmentHandler.removePartitions(kafkaConsumer.assignment());
+            failedOffset = offsetData;
+            commitOffsets(offsetData);
+            kafkaConsumer.unsubscribe();
+        }
+        synchronized (this) {
+            //recheck wait condition inside synchronized block
+            while (topics.size() == 0) {
+                //pause the polling thread until a topic comes in
+                log.debug("controlLoop waiting for topic");
+                this.wait();
+            }
+        }
+    }
+
+    private void commitAnyPendingOffsetsForRemovedTopics() throws InterruptedException {
+        Set<TopicPartition> removed = new HashSet<>();
+        //syncrhonized to avoid letting the topics set change
+        synchronized (this) {
+            for (TopicPartition partition : kafkaConsumer.assignment()) {
+                if (!topics.contains(partition.topic())) {
+                    removed.add(partition);
+                }
+            }
+            topicsChanged = false;
+        }
+        //commit any removed partitions before we unsubscribe them
+        Map<TopicPartition, OffsetAndMetadata> offsetData = this.acknowlegmentHandler.removePartitions(removed);
+        commitOffsets(offsetData);
+    }
+
+    private void flowControl() {
+        //pause partitions that haven't fully been processed yet and unpause those that have
+        Set<TopicPartition> paused = new HashSet<>();
+        Set<TopicPartition> unpaused = new HashSet<>();
+        for (Map.Entry<TopicPartition, AtomicInteger> entry : flowControl.entrySet()) {
+            if (entry.getValue().get() > 0) {
+                paused.add(entry.getKey());
+            } else {
+                unpaused.add(entry.getKey());
+            }
+        }
+        kafkaConsumer.pause(paused);
+        kafkaConsumer.resume(unpaused);
+    }
+
+    private void updateAssignment() {
+        this.acknowlegmentHandler.addPartitions(kafkaConsumer.assignment());
+        for (TopicPartition partition : kafkaConsumer.assignment()) {
+            this.flowControl.merge(partition, new AtomicInteger(),
+                                   (oldValue, newValue) -> oldValue == null ? newValue : oldValue);
+        }
+    }
+
+    private void addRecordsToStream(ConsumerRecords<?, ?> records) {
+        if (records.count() > 0) {
+            log.debug("adding: " + records.count() + " to record stream");
+            records.forEach(record -> flowControl.get(new TopicPartition(record.topic(), record.partition()))
+                                                 .incrementAndGet());
+            messageStream.addRecords(consumerRecordsToKafkaMessages(records));
+        }
+    }
+
+    private void commitOffsets(Map<TopicPartition, OffsetAndMetadata> offsets) {
+        if (offsets.size() > 0) {
+            //if the commit fails, perhaps due to a wakeup, store the offsets so they can be retried before the controller stops
+            failedOffset = offsets;
+            kafkaConsumer.commitSync(offsets);
+            failedOffset = null;
         }
     }
 
@@ -295,29 +307,29 @@ public class KafkaController {
 
     private class RebalanceListener implements ConsumerRebalanceListener {
         @Override public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-            log.info(controllerName + "Control-Loop partitions revoked");
+            log.debug("controlLoop partitions revoked");
             try {
                 Map<TopicPartition, OffsetAndMetadata>
                                 removedOffsetData =
                                 acknowlegmentHandler.removePartitions(partitions);
-                for(TopicPartition partition : partitions){
+                for (TopicPartition partition : partitions) {
                     flowControl.remove(partition);
                 }
 
                 kafkaConsumer.commitSync(removedOffsetData);
             } catch (InterruptedException e) {
-                log.info("Control-Loop partition rebalance interrupted", e);
+                log.debug("controlLoop partition rebalance interrupted", e);
                 Thread.currentThread().interrupt();
             }
         }
 
         @Override
         public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-            log.info(controllerName + "Control-Loop partitions assigned");
+            log.debug("controlLoop partitions assigned");
             acknowlegmentHandler.addPartitions(partitions);
-            for(TopicPartition partition : partitions){
+            for (TopicPartition partition : partitions) {
                 flowControl.merge(partition, new AtomicInteger(),
-                                       (oldValue, newValue) -> oldValue == null ? newValue : oldValue);
+                                  (oldValue, newValue) -> oldValue == null ? newValue : oldValue);
             }
         }
 
