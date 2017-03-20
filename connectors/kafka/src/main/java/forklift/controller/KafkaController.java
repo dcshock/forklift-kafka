@@ -115,7 +115,12 @@ public class KafkaController {
     public boolean acknowledge(ConsumerRecord<?, ?> record) throws InterruptedException {
         AtomicInteger flowCount = flowControl.get(new TopicPartition(record.topic(), record.partition()));
         if (flowCount != null) {
-            flowCount.decrementAndGet();
+            int counter = flowCount.decrementAndGet();
+            if (counter == 0) {
+                synchronized (this) {
+                    this.notifyAll();
+                }
+            }
         }
         log.debug("Acknowledge message with topic {} partition {} offset {}", record.topic(), record.partition(), record.offset());
         return running && this.acknowlegmentHandler.acknowledgeRecord(record);
@@ -158,8 +163,7 @@ public class KafkaController {
                     kafkaConsumer.subscribe(topics, new RebalanceListener());
                     updatedAssignment = true;
                 }
-                flowControl();
-                ConsumerRecords<?, ?> records = kafkaConsumer.poll(100);
+                ConsumerRecords<?, ?> records = flowControlledPoll();
                 //Must be done before we send records to the acknowledgmentHandler
                 if (updatedAssignment) {
                     updateAssignment();
@@ -254,7 +258,7 @@ public class KafkaController {
         commitOffsets(offsetData);
     }
 
-    private void flowControl() {
+    private ConsumerRecords<?,?> flowControlledPoll() throws InterruptedException {
         //pause partitions that haven't fully been processed yet and unpause those that have
         Set<TopicPartition> paused = new HashSet<>();
         Set<TopicPartition> unpaused = new HashSet<>();
@@ -267,6 +271,16 @@ public class KafkaController {
         }
         kafkaConsumer.pause(paused);
         kafkaConsumer.resume(unpaused);
+        if (unpaused.size() == 0 && paused.size() > 0) {
+            synchronized (this) {
+                this.wait(100);
+            }
+            //let the control loop continue so we can unpause partitions or send heartbeats
+            return null;
+        }
+        else {
+            return kafkaConsumer.poll(100);
+        }
     }
 
     private void updateAssignment() {
@@ -278,7 +292,7 @@ public class KafkaController {
     }
 
     private void addRecordsToStream(ConsumerRecords<?, ?> records) {
-        if (records.count() > 0) {
+        if (records != null && records.count() > 0) {
             log.debug("adding: " + records.count() + " to record stream");
             records.forEach(record -> flowControl.get(new TopicPartition(record.topic(), record.partition()))
                                                  .incrementAndGet());
