@@ -60,3 +60,44 @@ autoScalaLibrary := false
 crossPaths := false
 
 publishMavenStyle := true
+
+publishTo := {
+  val nexus = "https://oss.sonatype.org/"
+  if (isSnapshot.value)
+    Some("snapshots" at nexus + "content/repositories/snapshots")
+  else
+    Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+}
+
+pomIncludeRepository := { _ => false }
+
+pomExtra := (
+  <url>https://github.com/dcshock/forklift-kafka</url>
+  <licenses>
+    <license>
+      <name>BSD-style</name>
+      <url>http://www.opensource.org/licenses/bsd-license.php</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <scm>
+    <url>git@github.com:dcshock/forklift-kafka.git</url>
+    <connection>scm:git:git@github.com:dcshock/forklift-kafka.git</connection>
+  </scm>
+  <developers>
+    <developer>
+      <id>dcshock</id>
+      <name>Matt Conroy</name>
+      <url>http://www.mattconroy.com</url>
+    </developer>
+    <developer>
+      <id>afrieze</id>
+      <name>Andrew Frieze</name>
+    </developer>
+    <developer>
+      <id>kuroshii</id>
+      <name>Bridger Howell</name>
+    </developer>
+  </developers>)
+
+useGpg := true
