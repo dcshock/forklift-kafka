@@ -17,6 +17,7 @@ import org.apache.kafka.common.errors.SerializationException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -41,6 +42,7 @@ public class KafkaForkliftProducer implements ForkliftProducerI {
                                 "\"name\":\"ForkliftJsonMessage\"," +
                                 "\"fields\":[{\"name\":\"forkliftJsonMsg\",\"type\":\"string\"},{\"name\":\"forkliftProperties\",\"type\":\"string\"}]}";
 
+    private Map<Class<?>, Schema> avroSchemas = new ConcurrentHashMap<>();
     private Schema parsedStringSchema = null;
     private Schema parsedMapSchema = null;
     private Schema parsedJsonSchema = null;
@@ -111,17 +113,23 @@ public class KafkaForkliftProducer implements ForkliftProducerI {
     public String send(Object message) throws ProducerException {
         ProducerRecord record = null;
         if (message instanceof SpecificRecord) {
+
             Schema schema = ((SpecificRecord)message).getSchema();
             String originalJson = schema.toString(false);
             ObjectMapper mapper = new ObjectMapper();
             try {
-                JsonNode propertiesField = mapper.readTree("{\"name\":\"forkliftProperties\",\"type\":\"string\", \"default\":\"\"}");
-                ObjectNode schemaNode = (ObjectNode)mapper.readTree(originalJson);
-                ArrayNode fieldsNode = (ArrayNode)schemaNode.get("fields");
-                fieldsNode.add(propertiesField);
-                schemaNode.set("fields", fieldsNode);
-                Schema.Parser parser = new Schema.Parser();
-                Schema modifiedSchema = parser.parse(mapper.writeValueAsString(schemaNode));
+                Schema modifiedSchema = avroSchemas.get(message.getClass());
+                if (modifiedSchema == null) {
+                    JsonNode propertiesField =
+                                    mapper.readTree("{\"name\":\"forkliftProperties\",\"type\":\"string\", \"default\":\"\"}");
+                    ObjectNode schemaNode = (ObjectNode)mapper.readTree(originalJson);
+                    ArrayNode fieldsNode = (ArrayNode)schemaNode.get("fields");
+                    fieldsNode.add(propertiesField);
+                    schemaNode.set("fields", fieldsNode);
+                    Schema.Parser parser = new Schema.Parser();
+                    modifiedSchema = parser.parse(mapper.writeValueAsString(schemaNode));
+                    avroSchemas.put(message.getClass(), modifiedSchema);
+                }
                 GenericRecord avroRecord = new GenericData.Record(modifiedSchema);
                 ObjectNode messageNode = (ObjectNode)mapper.readTree(message.toString());
                 messageNode.put(FIELD_PROPERTIES, this.formatMap(this.properties));
