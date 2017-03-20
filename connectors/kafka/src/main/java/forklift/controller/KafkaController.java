@@ -159,7 +159,7 @@ public class KafkaController {
                     updatedAssignment = true;
                 }
                 flowControl();
-                ConsumerRecords<?, ?> records = kafkaConsumer.poll(1000);
+                ConsumerRecords<?, ?> records = kafkaConsumer.poll(100);
                 //Must be done before we send records to the acknowledgmentHandler
                 if (updatedAssignment) {
                     updateAssignment();
